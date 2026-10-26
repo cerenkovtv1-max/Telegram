@@ -20,11 +20,20 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Install Android command line tools
+        run: |
+          mkdir -p "$ANDROID_HOME/cmdline-tools"
+          curl -fL https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip -o /tmp/android-tools.zip
+          unzip -q /tmp/android-tools.zip -d /tmp
+          rm -rf "$ANDROID_HOME/cmdline-tools/latest"
+          mv /tmp/cmdline-tools "$ANDROID_HOME/cmdline-tools/latest"
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+
       - name: Install Android dependencies
         run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          yes | sdkmanager --licenses || true
-          sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
 
       - name: Make Gradle executable
         run: chmod +x gradlew
@@ -38,5 +47,4 @@ jobs:
         with:
           name: Telegram-test-apk
           path: TMessagesProj_App/build/outputs/apk/**/*.apk
-          
           

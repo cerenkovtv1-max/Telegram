@@ -28,6 +28,14 @@ public class ParodyGiftMessage {
 
     public static final String WATERMARK_TEXT = "PARODY";
 
+    /** Watermark width as a share of the card diagonal (0.5 = 50%). Tune it here. */
+    public static final float WATERMARK_SIZE = 0.5f;
+    /** Watermark opacity (0.28 = 28%). Tune it here. */
+    public static final float WATERMARK_ALPHA = 0.28f;
+    // the watermark is mandatory: whatever is set above, it never gets smaller or fainter than this
+    public static final float WATERMARK_MIN_SIZE = 0.35f;
+    public static final float WATERMARK_MIN_ALPHA = 0.15f;
+
     private static final String[] COMMANDS = { "/soft ", "/софт " };
 
     private ParodyGiftMessage() {}

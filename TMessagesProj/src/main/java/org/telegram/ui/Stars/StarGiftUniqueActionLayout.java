@@ -595,16 +595,18 @@ public class StarGiftUniqueActionLayout {
 
         parodyFillPaint.setTypeface(AndroidUtilities.bold());
         parodyFillPaint.setTextAlign(Paint.Align.CENTER);
-        parodyFillPaint.setColor(Theme.multAlpha(0xFFFFFFFF, .38f));
+        final float alpha = Math.max(ParodyGiftMessage.WATERMARK_ALPHA, ParodyGiftMessage.WATERMARK_MIN_ALPHA);
+        parodyFillPaint.setColor(Theme.multAlpha(0xFFFFFFFF, alpha));
         parodyStrokePaint.setTypeface(AndroidUtilities.bold());
         parodyStrokePaint.setTextAlign(Paint.Align.CENTER);
         parodyStrokePaint.setStyle(Paint.Style.STROKE);
-        parodyStrokePaint.setStrokeWidth(dp(2));
-        parodyStrokePaint.setColor(Theme.multAlpha(0xFF000000, .22f));
+        parodyStrokePaint.setStrokeWidth(dp(1.5f));
+        parodyStrokePaint.setColor(Theme.multAlpha(0xFF000000, alpha * 0.5f));
 
-        // pick the text size so that the word takes ~65% of the card diagonal
+        // pick the text size so that the word takes the configured share of the card diagonal
+        final float size = Math.max(ParodyGiftMessage.WATERMARK_SIZE, ParodyGiftMessage.WATERMARK_MIN_SIZE);
         parodyFillPaint.setTextSize(100);
-        final float textSize = 100 * (diagonal * 0.65f) / parodyFillPaint.measureText(ParodyGiftMessage.WATERMARK_TEXT);
+        final float textSize = 100 * (diagonal * size) / parodyFillPaint.measureText(ParodyGiftMessage.WATERMARK_TEXT);
         parodyFillPaint.setTextSize(textSize);
         parodyStrokePaint.setTextSize(textSize);
 

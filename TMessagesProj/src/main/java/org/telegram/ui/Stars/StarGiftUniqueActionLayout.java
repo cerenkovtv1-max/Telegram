@@ -33,6 +33,7 @@ import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
 import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.UserObject;
+import org.telegram.messenger.browser.Browser;
 import org.telegram.tgnet.TLObject;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.tgnet.tl.TL_stars;
@@ -47,6 +48,7 @@ import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.Text;
 import org.telegram.ui.Gifts.GiftMessageDrawable;
 import org.telegram.ui.Gifts.GiftSheet;
+import org.telegram.ui.Gifts.ParodyGiftMessage;
 import org.telegram.ui.LaunchActivity;
 
 import java.util.ArrayList;
@@ -65,6 +67,9 @@ public class StarGiftUniqueActionLayout {
     private int gradientRadius;
     private RadialGradient gradient;
     private final Matrix matrix = new Matrix();
+
+    private final TextPaint parodyFillPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+    private final TextPaint parodyStrokePaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
 
     private final GiftSheet.RibbonDrawable ribbon;
 
@@ -558,6 +563,10 @@ public class StarGiftUniqueActionLayout {
             }
         }
 
+        if (currentMessageObject != null && currentMessageObject.isParodyGift) {
+            drawParodyWatermark(canvas);
+        }
+
         if (!repost) {
             buttonRect.set(cx - (buttonText.getCurrentWidth() + dp(30)) / 2, buttonY, cx + (buttonText.getCurrentWidth() + dp(30)) / 2, buttonY + buttonHeight);
             buttonPath.rewind();
@@ -575,6 +584,38 @@ public class StarGiftUniqueActionLayout {
             ribbon.draw(canvas);
         }
 
+        canvas.restore();
+    }
+
+    /** Big semi-transparent diagonal "PARODY" across the whole card; drawn for every local parody gift message, nothing turns it off. */
+    private void drawParodyWatermark(Canvas canvas) {
+        final float w = backgroundRect.width();
+        final float h = backgroundRect.height();
+        final float diagonal = (float) Math.hypot(w, h);
+
+        parodyFillPaint.setTypeface(AndroidUtilities.bold());
+        parodyFillPaint.setTextAlign(Paint.Align.CENTER);
+        parodyFillPaint.setColor(Theme.multAlpha(0xFFFFFFFF, .38f));
+        parodyStrokePaint.setTypeface(AndroidUtilities.bold());
+        parodyStrokePaint.setTextAlign(Paint.Align.CENTER);
+        parodyStrokePaint.setStyle(Paint.Style.STROKE);
+        parodyStrokePaint.setStrokeWidth(dp(2));
+        parodyStrokePaint.setColor(Theme.multAlpha(0xFF000000, .22f));
+
+        // pick the text size so that the word takes ~90% of the card diagonal
+        parodyFillPaint.setTextSize(100);
+        final float textSize = 100 * (diagonal * 0.9f) / parodyFillPaint.measureText(ParodyGiftMessage.WATERMARK_TEXT);
+        parodyFillPaint.setTextSize(textSize);
+        parodyStrokePaint.setTextSize(textSize);
+
+        final float angle = (float) Math.toDegrees(Math.atan2(h, w));
+        final Paint.FontMetrics fm = parodyFillPaint.getFontMetrics();
+        final float baseline = h / 2.0f - (fm.ascent + fm.descent) / 2.0f;
+
+        canvas.save();
+        canvas.rotate(-angle, w / 2.0f, h / 2.0f);
+        canvas.drawText(ParodyGiftMessage.WATERMARK_TEXT, w / 2.0f, baseline, parodyStrokePaint);
+        canvas.drawText(ParodyGiftMessage.WATERMARK_TEXT, w / 2.0f, baseline, parodyFillPaint);
         canvas.restore();
     }
 
@@ -649,6 +690,11 @@ public class StarGiftUniqueActionLayout {
             if (onButtonClick != null) {
                 if (buttonBounce.isPressed()) {
                     onButtonClick.run();
+                }
+            } else if (currentMessageObject != null && currentMessageObject.isParodyGift) {
+                // fake message: never open the gift sheet with its fake id, only the public gift page by slug
+                if (action != null && action.gift != null && !TextUtils.isEmpty(action.gift.slug)) {
+                    Browser.openUrl(view.getContext(), "https://" + MessagesController.getInstance(currentAccount).linkPrefix + "/nft/" + action.gift.slug);
                 }
             } else if (burned) {
                 final BaseFragment lastFragment = LaunchActivity.getSafeLastFragment();

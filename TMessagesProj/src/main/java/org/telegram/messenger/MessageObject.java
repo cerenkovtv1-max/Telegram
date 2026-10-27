@@ -397,6 +397,8 @@ public class MessageObject {
     };
     public boolean isRepostPreview;
     public boolean isRepostVideoPreview;
+    // local-only fake gift transfer (see ParodyGiftMessage): never stored or sent, its card is always drawn with a PARODY watermark
+    public boolean isParodyGift;
     public boolean business;
     public boolean forceAvatar;
     public Drawable customAvatarDrawable;

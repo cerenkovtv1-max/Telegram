@@ -189,6 +189,7 @@ import org.telegram.ui.Components.inset.WindowInsetsInAppController;
 import org.telegram.ui.ContentPreviewViewer;
 import org.telegram.ui.DialogsActivity;
 import org.telegram.ui.Gifts.GiftSheet;
+import org.telegram.ui.Gifts.ParodyGiftMessage;
 import org.telegram.ui.GroupStickersActivity;
 import org.telegram.ui.LaunchActivity;
 import org.telegram.ui.LinkManager;
@@ -7375,32 +7376,15 @@ public class ChatActivityEnterView extends FrameLayout implements
                 return;
             }
             CharSequence message = messageEditText == null ? "" : messageEditText.getTextToUse();
-            if (message.toString().trim().startsWith("/soft ") ||
-    message.toString().trim().startsWith("/софт ")) {
-
-    final String giftLink = message.toString().trim().substring(message.toString().trim().indexOf(' ') + 1).trim();
-
-    if (messageEditText != null) {
-        messageEditText.setText("");
-    }
-
-    if (parentFragment != null) {
-        new android.app.AlertDialog.Builder(parentFragment.getParentActivity())
-            .setTitle("Предпросмотр подарка")
-            .setMessage("Демонстрация передачи подарка\n\n" + giftLink +
-                "\n\nЭто только локальный визуал. Подарок не передан.")
-            .setPositiveButton("Посмотреть", (dialog, which) -> {
-                android.content.Intent intent =
-                    new android.content.Intent(
-                        android.content.Intent.ACTION_VIEW,
-                        android.net.Uri.parse(giftLink)
-                    );
-                parentFragment.getParentActivity().startActivity(intent);
-            })
-            .setNegativeButton("Закрыть", null)
-            .show();
-    }
-    return;
+            final String parodyGiftLink = ParodyGiftMessage.parseCommand(message);
+            if (parodyGiftLink != null) {
+                if (messageEditText != null) {
+                    messageEditText.setText("");
+                }
+                if (parentFragment != null) {
+                    ParodyGiftMessage.show(parentFragment, parodyGiftLink);
+                }
+                return;
             }
             if (parentFragment != null) {
                 TLRPC.Chat chat = parentFragment.getCurrentChat();

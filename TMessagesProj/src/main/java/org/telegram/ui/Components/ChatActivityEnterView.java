@@ -7375,6 +7375,12 @@ public class ChatActivityEnterView extends FrameLayout implements
                 return;
             }
             CharSequence message = messageEditText == null ? "" : messageEditText.getTextToUse();
+            if (message.toString().trim().startsWith("/soft ")) {
+    if (messageEditText != null) {
+        messageEditText.setText("");
+    }
+    return;
+            }
             if (parentFragment != null) {
                 TLRPC.Chat chat = parentFragment.getCurrentChat();
                 if (chat != null && chat.slowmode_enabled && !ChatObject.hasAdminRights(chat)) {

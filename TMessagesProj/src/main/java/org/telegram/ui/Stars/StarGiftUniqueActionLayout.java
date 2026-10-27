@@ -602,9 +602,9 @@ public class StarGiftUniqueActionLayout {
         parodyStrokePaint.setStrokeWidth(dp(2));
         parodyStrokePaint.setColor(Theme.multAlpha(0xFF000000, .22f));
 
-        // pick the text size so that the word takes ~90% of the card diagonal
+        // pick the text size so that the word takes ~65% of the card diagonal
         parodyFillPaint.setTextSize(100);
-        final float textSize = 100 * (diagonal * 0.9f) / parodyFillPaint.measureText(ParodyGiftMessage.WATERMARK_TEXT);
+        final float textSize = 100 * (diagonal * 0.65f) / parodyFillPaint.measureText(ParodyGiftMessage.WATERMARK_TEXT);
         parodyFillPaint.setTextSize(textSize);
         parodyStrokePaint.setTextSize(textSize);
 

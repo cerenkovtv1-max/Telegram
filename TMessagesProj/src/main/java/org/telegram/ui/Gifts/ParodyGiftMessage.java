@@ -19,7 +19,8 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * "/soft https://t.me/nft/slug": shows a local-only service message about a collectible gift transfer
+ * "/soft https://t.me/nft/slug" ("you transferred a gift") and "/sotf https://t.me/nft/slug" ("the other person
+ * transferred you a gift"): shows a local-only service message about a collectible gift transfer
  * in the open chat. The message has a negative id, is never stored and never sent anywhere, and no gift
  * is actually transferred. Its card is always drawn with the {@link #WATERMARK_TEXT} watermark
  * (see StarGiftUniqueActionLayout), there is no setting to turn that off.
@@ -36,19 +37,36 @@ public class ParodyGiftMessage {
     public static final float WATERMARK_MIN_SIZE = 0.35f;
     public static final float WATERMARK_MIN_ALPHA = 0.15f;
 
-    private static final String[] COMMANDS = { "/soft ", "/софт " };
+    private static final String[] OUTGOING_COMMANDS = { "/soft ", "/софт " };
+    private static final String[] INCOMING_COMMANDS = { "/sotf ", "/сотф " };
 
     private ParodyGiftMessage() {}
 
-    /** @return the text after the command, or null if the text is not a "/soft <link>" command */
-    public static String parseCommand(CharSequence text) {
+    public static class Command {
+        /** false: "you transferred a gift", true: "<the other person> transferred you a gift" */
+        public final boolean incoming;
+        public final String link;
+
+        private Command(boolean incoming, String link) {
+            this.incoming = incoming;
+            this.link = link;
+        }
+    }
+
+    /** @return the parsed command, or null if the text is not a "/soft <link>" or "/sotf <link>" command */
+    public static Command parseCommand(CharSequence text) {
         if (text == null) {
             return null;
         }
         final String trimmed = text.toString().trim();
-        for (String command : COMMANDS) {
+        for (String command : OUTGOING_COMMANDS) {
             if (trimmed.regionMatches(true, 0, command, 0, command.length())) {
-                return trimmed.substring(command.length()).trim();
+                return new Command(false, trimmed.substring(command.length()).trim());
+            }
+        }
+        for (String command : INCOMING_COMMANDS) {
+            if (trimmed.regionMatches(true, 0, command, 0, command.length())) {
+                return new Command(true, trimmed.substring(command.length()).trim());
             }
         }
         return null;
@@ -95,10 +113,16 @@ public class ParodyGiftMessage {
     }
 
     /** Looks the gift up by slug (the same request the app uses to open t.me/nft links) and shows the local message in the chat. */
-    public static void show(ChatActivity chat, String link) {
-        final String slug = extractSlug(link);
+    public static void show(ChatActivity chat, Command command) {
+        final String slug = extractSlug(command.link);
         if (slug == null) {
             BulletinFactory.of(chat).createSimpleBulletin(R.raw.error, getString(R.string.UniqueGiftNotFound)).show();
+            return;
+        }
+        final TLRPC.User user = chat.getCurrentUser();
+        if (command.incoming && (user == null || user.self)) {
+            // "transferred you a gift" needs a specific other person as the sender
+            BulletinFactory.of(chat).createSimpleBulletin(R.raw.error, getString(R.string.ParodyGiftNeedsPerson)).show();
             return;
         }
         final int currentAccount = chat.getCurrentAccount();
@@ -121,17 +145,20 @@ public class ParodyGiftMessage {
             if (chat.isFinished) {
                 return;
             }
-            final TLRPC.User user = chat.getCurrentUser();
             final long peerId = user != null ? user.id : chat.getDialogId();
-            if (!chat.addLocalMessage(create(currentAccount, peerId, gift))) {
+            if (!chat.addLocalMessage(create(currentAccount, peerId, gift, command.incoming))) {
                 BulletinFactory.of(chat).createSimpleBulletin(R.raw.error, getString(R.string.ParodyGiftCantShow)).show();
             }
         }));
     }
 
-    /** Local service message "You transferred a gift to ..." with a unique-gift card, flagged as parody. */
-    public static MessageObject create(int currentAccount, long dialogId, TL_stars.TL_starGiftUnique gift) {
+    /**
+     * Local service message with a unique-gift card, flagged as parody:
+     * "You transferred a gift to ..." or, if incoming, "... transferred you a gift!".
+     */
+    public static MessageObject create(int currentAccount, long dialogId, TL_stars.TL_starGiftUnique gift, boolean incoming) {
         final MessagesController controller = MessagesController.getInstance(currentAccount);
+        final long selfId = UserConfig.getInstance(currentAccount).getClientUserId();
 
         final TLRPC.TL_messageActionStarGiftUnique action = new TLRPC.TL_messageActionStarGiftUnique();
         action.gift = gift;
@@ -140,9 +167,10 @@ public class ParodyGiftMessage {
         final TLRPC.TL_messageService message = new TLRPC.TL_messageService();
         message.local_id = message.id = UserConfig.getInstance(currentAccount).getNewMessageId();
         message.dialog_id = dialogId;
-        message.out = true;
-        message.from_id = controller.getPeer(UserConfig.getInstance(currentAccount).getClientUserId());
-        message.peer_id = controller.getPeer(dialogId);
+        message.out = !incoming;
+        // like real private messages: the sender is in from_id, an incoming message is addressed to us
+        message.from_id = controller.getPeer(incoming ? dialogId : selfId);
+        message.peer_id = controller.getPeer(incoming ? selfId : dialogId);
         message.date = ConnectionsManager.getInstance(currentAccount).getCurrentTime();
         message.action = action;
 

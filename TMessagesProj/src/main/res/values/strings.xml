@@ -1587,6 +1587,7 @@
     <string name="UniqueGiftNotFound">Gift was not found</string>
     <string name="UniqueGiftNotFoundBurned">Gift has already been burned.</string>
     <string name="ParodyGiftCantShow">The gift preview can\'t be shown here. Open the latest messages of a regular chat and try again.</string>
+    <string name="ParodyGiftNeedsPerson">This command works only in a chat with another person.</string>
     <string name="GiftAuctionNotFound">Gift auction was not found</string>
     <string name="SlowModeHint">Slow Mode is enabled. You can send\nyour next message in %1$s</string>
     <string name="TapForVideo">Tap for photo, hold for video</string>

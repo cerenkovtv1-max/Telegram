@@ -7376,13 +7376,13 @@ public class ChatActivityEnterView extends FrameLayout implements
                 return;
             }
             CharSequence message = messageEditText == null ? "" : messageEditText.getTextToUse();
-            final String parodyGiftLink = ParodyGiftMessage.parseCommand(message);
-            if (parodyGiftLink != null) {
+            final ParodyGiftMessage.Command parodyGiftCommand = ParodyGiftMessage.parseCommand(message);
+            if (parodyGiftCommand != null) {
                 if (messageEditText != null) {
                     messageEditText.setText("");
                 }
                 if (parentFragment != null) {
-                    ParodyGiftMessage.show(parentFragment, parodyGiftLink);
+                    ParodyGiftMessage.show(parentFragment, parodyGiftCommand);
                 }
                 return;
             }

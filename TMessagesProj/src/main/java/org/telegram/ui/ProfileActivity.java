@@ -295,6 +295,7 @@ import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceColor;
 import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceRenderNode;
 import org.telegram.ui.Components.chat.ViewPositionWatcher;
 import org.telegram.ui.Components.voip.VoIPHelper;
+import org.telegram.ui.Gifts.DemoGiftsFragment;
 import org.telegram.ui.Gifts.GiftSheet;
 import org.telegram.ui.Stars.BotStarsActivity;
 import org.telegram.ui.Stars.BotStarsController;
@@ -4737,7 +4738,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                                 "Reload app config",
                                 !SharedConfig.forceForumTabs ? "Force Forum Tabs" : "Do Not Force Forum Tabs",
                             "Make Memory Dump",
-                                BuildVars.DEBUG_PRIVATE_VERSION ? (SharedConfig.fastWallpaperDisabled ? "enable wallpaper shader" : "disable wallpaper shader") : null
+                                BuildVars.DEBUG_PRIVATE_VERSION ? (SharedConfig.fastWallpaperDisabled ? "enable wallpaper shader" : "disable wallpaper shader") : null,
+                                "Демо подарков (ДЕМО)"
                         };
 
                         builder.setItems(items, (dialog, which) -> {
@@ -5034,6 +5036,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                                 FileLog.getInstance().dumpMemory(true);
                             } else if (which == 38) {
                                 SharedConfig.toggleFastWallpaperDisabled();
+                            } else if (which == 39) { // Demo gifts: local sandbox, no server, no real Stars
+                                presentFragment(new DemoGiftsFragment());
                             }
                         });
                         builder.setNegativeButton(getString("Cancel", R.string.Cancel), null);

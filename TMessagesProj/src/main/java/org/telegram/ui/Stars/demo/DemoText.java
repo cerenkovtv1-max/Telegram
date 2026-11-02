@@ -134,7 +134,7 @@ public final class DemoText {
 
     /** The diagonal watermark across the DEMO card (one word, drawn big; keep it short). */
     public static String watermark() {
-        return "PARODY";
+        return "";
     }
 
     /** Text-only bulletin after the DEMO upgrade (no icon). It must say plainly that nothing real happened. */
@@ -144,8 +144,8 @@ public final class DemoText {
 
     public static String upgradedBulletinText() {
         return t(
-            "Это локальная демонстрация, настоящий подарок не создан.",
-            "This is a local demonstration, no real gift was created."
+            "",
+            ""
         );
     }
 

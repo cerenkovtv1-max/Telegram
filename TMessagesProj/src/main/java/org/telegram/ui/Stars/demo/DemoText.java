@@ -99,7 +99,7 @@ public final class DemoText {
     // ---- confirm page (stock "Upgrade Gift" page) ----
 
     public static String upgradeButton() {
-        return t("Улучшить (DEMO)", "Upgrade (DEMO)");
+        return t("Улучшить", "Upgrade");
     }
 
     public static String chosenLine(String model, String backdrop, String symbol) {

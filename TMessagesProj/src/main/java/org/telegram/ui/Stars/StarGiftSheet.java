@@ -2105,6 +2105,31 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
         private boolean showOptions;
         private Boolean optionsViewLight;
 
+        // The small "pop" of the model right after the roll lands (measured on the original upgrade video: about 1.3x
+        // within 0.3 s, together with the confetti). Tune the three values below.
+        private static final float DEMO_ZOOM_PEAK = 1.25f;
+        private static final long DEMO_ZOOM_IN_MS = 320;
+        private static final long DEMO_ZOOM_OUT_MS = 520;
+
+        /** DEMO: zooms the model in a little and settles back, like the original after the roll. */
+        public void playDemoZoom() {
+            imageLayout.animate().cancel();
+            imageLayout.setScaleX(1.0f);
+            imageLayout.setScaleY(1.0f);
+            imageLayout.animate()
+                .scaleX(DEMO_ZOOM_PEAK)
+                .scaleY(DEMO_ZOOM_PEAK)
+                .setDuration(DEMO_ZOOM_IN_MS)
+                .setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT)
+                .withEndAction(() -> imageLayout.animate()
+                    .scaleX(1.0f)
+                    .scaleY(1.0f)
+                    .setDuration(DEMO_ZOOM_OUT_MS)
+                    .setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT)
+                    .start())
+                .start();
+        }
+
         private TextView demoBadge;
 
         /** The "DEMO" tag of the local DEMO screens (top centre, clear of the close and "..." buttons). */
@@ -4841,6 +4866,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
                 topView.imagesRollView.setAlpha(0.0f);
 
                 if (demoHost != null) {
+                    topView.playDemoZoom();
                     demoApplyResultButton();
                 } else if (upgradedOnce && viewPager != null && giftsList != null && getListPosition() >= 0 && giftsList.findGiftToUpgrade(getListPosition()) >= 0) {
                     button.setFilled(false);
@@ -6805,7 +6831,13 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
         button.setFilled(true);
         button.setLoading(false);
         button.setSubText(null, true);
-        button.setText(DemoText.upgradeButton(), true);
+        final long upgradePrice = demoBaseGift != null ? demoBaseGift.upgrade_stars : 0;
+        if (upgradePrice > 0) {
+            // the stock button text with the star, as in the original ("Upgrade for (star)N"); only a label, nothing is charged
+            button.setText(StarsIntroActivity.replaceStars(LocaleController.formatString(R.string.Gift2UpgradeButton, upgradePrice), 1.13f, starCached), true);
+        } else {
+            button.setText(DemoText.upgradeButton(), true);
+        }
         button.setOnClickListener(v -> demoConfirmUpgrade());
         underButtonContainer.setVisibility(View.GONE);
         updateUnderButtonContainer();
@@ -6860,6 +6892,9 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             roller = null;
         }
         demoShowBottomButton();
+        topView.imageLayout.animate().cancel();
+        topView.imageLayout.setScaleX(1.0f);
+        topView.imageLayout.setScaleY(1.0f);
         topView.imageLayout.setAlpha(1.0f);
         topView.imagesRollView.setAlpha(0.0f);
         rolling = false;
@@ -6875,11 +6910,21 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     private void demoApplyResultButton() {
         demoButtonHidden = true;
         buttonContainer.setVisibility(View.GONE);
+        demoSetInfoBottomPadding(dp(16)); // nothing to leave room for
     }
 
     private void demoShowBottomButton() {
         demoButtonHidden = false;
         buttonContainer.setVisibility(currentPage.is(PAGE_CRAFTING) ? View.GONE : View.VISIBLE);
+        demoSetInfoBottomPadding(dp(12 + 48 + 8)); // the stock value: room for the button
+    }
+
+    private void demoSetInfoBottomPadding(int bottom) {
+        if (infoLayout.getPaddingBottom() == bottom) {
+            return;
+        }
+        infoLayout.setPadding(infoLayout.getPaddingLeft(), infoLayout.getPaddingTop(), infoLayout.getPaddingRight(), bottom);
+        recyclerListView.post(() -> adapter.setHeights(topView.getFinalHeight(), getBottomHeight()));
     }
 
     /** The "..." menu in DEMO: only the DEMO actions. */

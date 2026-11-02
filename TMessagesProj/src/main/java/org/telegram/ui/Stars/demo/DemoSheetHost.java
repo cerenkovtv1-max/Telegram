@@ -3,6 +3,8 @@ package org.telegram.ui.Stars.demo;
 import org.telegram.tgnet.tl.TL_stars;
 import org.telegram.ui.Stars.StarGiftSheet;
 
+import java.util.ArrayList;
+
 /**
  * What the real gift screen ({@link StarGiftSheet}) asks of the local DEMO when it runs in DEMO mode.
  *
@@ -29,6 +31,9 @@ public interface DemoSheetHost {
 
     /** Back to the list of gifts. */
     void onPickAnotherGift(StarGiftSheet sheet);
+
+    /** Every model, backdrop and symbol of the picked gift (what "View all variants" shows). */
+    ArrayList<TL_stars.StarGiftAttribute> allVariants();
 
     /** The sheet was closed. */
     void onDismissed();

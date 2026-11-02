@@ -11,6 +11,8 @@ import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Stars.StarGiftPreviewSheet;
 import org.telegram.ui.Stars.StarGiftSheet;
 
+import java.util.ArrayList;
+
 /**
  * One run of the DEMO for one gift: the real gift screen ({@link StarGiftSheet}) in DEMO mode, with this class as its
  * host ({@link DemoSheetHost}).
@@ -114,6 +116,11 @@ final class DemoSession implements DemoSheetHost {
     public void onPickAnotherGift(StarGiftSheet s) {
         s.dismiss();
         AndroidUtilities.runOnUIThread(() -> DemoUpgrade.start(context, account, resourcesProvider), 250);
+    }
+
+    @Override
+    public ArrayList<TL_stars.StarGiftAttribute> allVariants() {
+        return traits.all;
     }
 
     @Override

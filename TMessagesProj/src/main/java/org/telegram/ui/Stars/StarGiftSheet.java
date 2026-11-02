@@ -2130,6 +2130,36 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
                 .start();
         }
 
+        private LinearLayout demoVariantsChip;
+
+        /** DEMO: the "View all variants >" chip under the title of the upgrade page, as in the original. */
+        public void setDemoVariants(CharSequence text, ArrayList<TLRPC.Document> thumbs, Runnable onClick) {
+            if (demoVariantsChip == null) {
+                demoVariantsChip = new LinearLayout(getContext());
+                demoVariantsChip.setOrientation(LinearLayout.HORIZONTAL);
+                demoVariantsChip.setGravity(Gravity.CENTER_VERTICAL);
+                demoVariantsChip.setPadding(dp(8), 0, dp(10), 0);
+                demoVariantsChip.setBackground(Theme.createRoundRectDrawable(dp(14), 0x33FFFFFF));
+                ScaleStateListAnimator.apply(demoVariantsChip);
+                layout[PAGE_UPGRADE].addView(demoVariantsChip, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 28, Gravity.CENTER, 0, 8, 0, 0));
+            }
+            demoVariantsChip.removeAllViews();
+            for (int i = 0; i < Math.min(3, thumbs.size()); ++i) {
+                final BackupImageView thumb = new BackupImageView(getContext());
+                thumb.setRoundRadius(dp(9));
+                setGiftImage(thumb.getImageReceiver(), thumbs.get(i), 24);
+                demoVariantsChip.addView(thumb, LayoutHelper.createLinear(18, 18, Gravity.CENTER_VERTICAL, 0, 0, 4, 0));
+            }
+            final TextView label = new TextView(getContext());
+            label.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+            label.setTypeface(AndroidUtilities.bold());
+            label.setTextColor(0xFFFFFFFF);
+            label.setText(AndroidUtilities.replaceArrows(text, false, dp(1), 0));
+            demoVariantsChip.addView(label, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, 2, 0, 0, 0));
+            demoVariantsChip.setOnClickListener(v -> onClick.run());
+            demoVariantsChip.setVisibility(View.VISIBLE);
+        }
+
         private TextView demoBadge;
 
         /** The "DEMO" tag of the local DEMO screens (top centre, clear of the close and "..." buttons). */
@@ -4684,6 +4714,12 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             } else {
                 tableView.addRow(getString(R.string.Gift2Quantity), formatPluralStringComma("Gift2QuantityIssued1", gift.availability_issued) + formatPluralStringComma("Gift2QuantityIssued2", gift.availability_total));
             }
+            if (demoHost != null) {
+                final CharSequence demoValue = demoValueText();
+                if (demoValue != null) {
+                    tableView.addRow(getString(R.string.GiftValue2), demoValue, getString(R.string.GiftValue2LearnMore), () -> blockedInDemo());
+                }
+            }
             if (!TextUtils.isEmpty(gift.slug) && (gift.flags & 256) != 0) {
                 final String roundedValue = BillingController.getInstance().formatCurrency(gift.value_amount, gift.value_currency, BillingController.getInstance().getCurrencyExp(gift.value_currency), true);
                 final String value = BillingController.getInstance().formatCurrency(gift.value_amount, gift.value_currency);
@@ -5176,6 +5212,9 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
 //            if (!refunded && savedStarGift.can_upgrade) {
 //                tableView.addRow(getString(R.string.Gift2Status), getString(R.string.Gift2StatusNonUnique), getString(R.string.Gift2StatusUpgrade), this::openUpgrade);
 //            }
+            if (demoHost != null && !refunded && savedStarGift.can_upgrade) {
+                tableView.addRow(getString(R.string.Gift2Status), getString(R.string.Gift2StatusNonUnique)); // DEMO: as in the original
+            }
             if (savedStarGift.message != null && !TextUtils.isEmpty(savedStarGift.message.text) && !refunded) {
                 tableView.addFullRow(savedStarGift.message.text, savedStarGift.message.entities);
             }
@@ -5191,6 +5230,15 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
                         getString(R.string.Gift2UpgradeButtonFree) :
                         getString(R.string.Gift2UpgradeButtonGift)
                 );
+                if (demoHost != null) {
+                    // DEMO: the icon stands after the text, as in the original
+                    final CharSequence upgradeText = savedStarGift.upgrade_stars > 0 ?
+                        getString(R.string.Gift2UpgradeButtonFree) :
+                        getString(R.string.Gift2UpgradeButtonGift);
+                    sb = new SpannableStringBuilder(upgradeText);
+                    sb.append("  ^");
+                    sb.setSpan(upgradeIconSpan, sb.length() - 1, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                }
                 button.setFilled(true);
                 button.setText(sb, !firstSet);
                 button.setSubText(null, !firstSet);
@@ -5261,8 +5309,9 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             }), true, dp(8f / 3f), dp(.66f)));
             afterTableTextView.setVisibility(View.VISIBLE);
         } else if (demoHost != null) {
-            // DEMO: nothing under the table (no real "show / hide in profile" link either)
-            afterTableTextView.setVisibility(View.GONE);
+            // DEMO: the same grey line as the original; the link (base gift page) is blocked in DEMO
+            afterTableTextView.setText(demoFooter());
+            afterTableTextView.setVisibility(View.VISIBLE);
         } else if (myProfile && isMine(currentAccount, dialogId)) {
             if (dialogId >= 0) {
                 final SpannableStringBuilder sb = new SpannableStringBuilder();
@@ -6826,12 +6875,14 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
         roller.preload(pool);
         topView.setPreviewingAttributes(chosen.toList());
         topView.stopPreviewRotation();
-        topView.setText(1, getString(R.string.Gift2UpgradeTitle), DemoText.chosenLine(chosen.model.name, chosen.backdrop.name, chosen.pattern.name), null, null);
+        topView.setText(1, getString(R.string.Gift2UpgradeTitle), null, null, null);
+        topView.setDemoVariants(DemoText.viewAllVariants(), demoThumbs(), this::demoOpenVariants);
 
         button.setFilled(true);
         button.setLoading(false);
         button.setSubText(null, true);
-        final long upgradePrice = demoBaseGift != null ? demoBaseGift.upgrade_stars : 0;
+        // the upgrade costs 20% of what the gift cost in Stars (e.g. 5000 -> 1000)
+        final long upgradePrice = demoBaseGift != null ? Math.round(demoBaseGift.stars * 0.2) : 0;
         if (upgradePrice > 0) {
             // the stock button text with the star, as in the original ("Upgrade for (star)N"); only a label, nothing is charged
             button.setText(StarsIntroActivity.replaceStars(LocaleController.formatString(R.string.Gift2UpgradeButton, upgradePrice), 1.13f, starCached), true);
@@ -6841,13 +6892,65 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
         button.setOnClickListener(v -> demoConfirmUpgrade());
         underButtonContainer.setVisibility(View.GONE);
         updateUnderButtonContainer();
-        checkboxLayout.setVisibility(View.GONE);
-        checkboxSeparator.setVisibility(View.GONE);
+        // "With my name", as in the original (it has no effect in DEMO)
+        checkboxTextView.setText(DemoText.withMyName());
+        checkbox.setChecked(false, false);
+        checkboxLayout.setVisibility(View.VISIBLE);
+        checkboxSeparator.setVisibility(View.VISIBLE);
         upgradeFeatureCells[0].set(R.drawable.menu_feature_unique, getString(R.string.Gift2UpgradeFeature1Title), getString(R.string.GiftsFeature1Text));
         upgradeFeatureCells[1].set(R.drawable.menu_feature_tradable, getString(R.string.Gift2UpgradeFeature3Title), getString(R.string.GiftsFeature2Text));
         upgradeFeatureCells[2].set(R.drawable.menu_wear, getString(R.string.GiftsFeature3Title), getString(R.string.GiftsFeature3Text));
 
         AndroidUtilities.runOnUIThread(() -> switchPage(PAGE_UPGRADE, true));
+    }
+
+    /** Up to three of the gift's own models, shown as tiny previews on the "View all variants" chip. */
+    private ArrayList<TLRPC.Document> demoThumbs() {
+        final ArrayList<TLRPC.Document> documents = new ArrayList<>();
+        if (sample_attributes != null) {
+            for (TL_stars.starGiftAttributeModel model : findAttributes(sample_attributes, TL_stars.starGiftAttributeModel.class)) {
+                if (model.document != null) {
+                    documents.add(model.document);
+                }
+                if (documents.size() >= 3) {
+                    break;
+                }
+            }
+        }
+        return documents;
+    }
+
+    /** The stock screen with all of this gift's variants (models, backdrops, symbols), as "View all variants" opens in the original. */
+    private void demoOpenVariants() {
+        if (demoHost == null || demoBaseGift == null) {
+            return;
+        }
+        new StarGiftPreviewSheet(getContext(), resourcesProvider, currentAccount, DemoText.giftLabel(demoBaseGift), demoHost.allVariants(), false).show();
+    }
+
+    /** "~$N": an estimate from the gift's own market data (collection floor in Stars, else its price), at the client's Stars rate. */
+    private CharSequence demoValueText() {
+        if (demoBaseGift == null) {
+            return null;
+        }
+        final long stars = Math.max(demoBaseGift.resell_min_stars, demoBaseGift.stars);
+        if (stars <= 0) {
+            return null;
+        }
+        final long cents = (long) (stars / 1000.0 * MessagesController.getInstance(currentAccount).starsUsdWithdrawRate1000);
+        return "~" + BillingController.getInstance().formatCurrency(cents, "USD");
+    }
+
+    /** The grey line under the table: "hidden from profile", like the original (its link is blocked in DEMO). */
+    private CharSequence demoFooter() {
+        final SpannableStringBuilder sb = new SpannableStringBuilder(". ");
+        sb.setSpan(new ColoredImageSpan(R.drawable.mini_gift_hidden), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        if (savedStarGift != null && savedStarGift.gift instanceof TL_stars.TL_starGiftUnique) {
+            sb.append(DemoText.hiddenFromProfile());
+            return sb;
+        }
+        sb.append(AndroidUtilities.replaceSingleTag(DemoText.hiddenFromProfileWithLink(), this::toggleShow));
+        return AndroidUtilities.replaceArrows(sb, true, dp(8f / 3f), dp(.66f));
     }
 
     /**

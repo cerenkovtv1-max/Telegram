@@ -102,14 +102,23 @@ public final class DemoText {
         return t("Улучшить", "Upgrade");
     }
 
-    public static String chosenLine(String model, String backdrop, String symbol) {
-        return t(
-            "DEMO • выбрано: " + model + " • " + backdrop + " • " + symbol,
-            "DEMO • picked: " + model + " • " + backdrop + " • " + symbol
-        );
+    public static String viewAllVariants() {
+        return t("Просмотреть все варианты >", "View all variants >");
+    }
+
+    public static String withMyName() {
+        return t("С моим именем", "With my name");
     }
 
     // ---- result page ----
+
+    public static String hiddenFromProfile() {
+        return t("Подарок скрыт из Вашего профиля.", "This gift is hidden from your profile.");
+    }
+
+    public static String hiddenFromProfileWithLink() {
+        return t("Подарок скрыт из профиля. **Показывать >**", "This gift is hidden from your profile. **Show >**");
+    }
 
     public static String edit() {
         return t("Изменить", "Edit");

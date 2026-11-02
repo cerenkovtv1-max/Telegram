@@ -136,21 +136,6 @@ public final class DemoText {
         return t("В DEMO это действие недоступно", "Not available in DEMO");
     }
 
-    public static String demoBadge() {
-        return "";
-    }
-
-    public static String upgradedBulletinTitle() {
-        return t("", "");
-    }
-
-    public static String upgradedBulletinText() {
-        return t(
-            "",
-            ""
-        );
-    }
-
     /** The name of a base gift as the server sent it; the numeric id only when the server sent no title. */
     public static String giftLabel(TL_stars.StarGift gift) {
         if (gift != null && gift.title != null && !gift.title.isEmpty()) {

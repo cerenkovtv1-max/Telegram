@@ -40,7 +40,7 @@ public final class DemoGiftCatalog {
         void onReady(DemoGiftCatalog catalog);
     }
 
-    private static final int MAX_PARALLEL_PREVIEWS = 3;
+    private static final int MAX_PARALLEL_PREVIEWS = 6;
     private static final long GIFTS_WAIT_MS = 20_000;
     private static final long PREVIEWS_WATCHDOG_MS = 90_000;
     private static final long CACHE_TTL_MS = 10 * 60 * 1000L;

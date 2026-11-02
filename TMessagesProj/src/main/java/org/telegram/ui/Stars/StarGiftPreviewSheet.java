@@ -335,6 +335,9 @@ public class StarGiftPreviewSheet extends BottomSheetWithRecyclerListView {
         };
         topView.onSwitchPage(new StarGiftSheet.PageTransition(StarGiftSheet.PAGE_UPGRADE, StarGiftSheet.PAGE_UPGRADE, 1.0f));
         topView.setPreviewingAttributes(initialSelection != null ? initialSelection.toList() : attributes);
+        if (initialSelection != null) {
+            topView.stopPreviewRotation();
+        }
         topView.hideCloseButton();
         headerView.addView(topView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
         headerView.setPadding(backgroundPaddingLeft, 0, backgroundPaddingLeft, 0);
@@ -890,6 +893,8 @@ public class StarGiftPreviewSheet extends BottomSheetWithRecyclerListView {
 
                 cell.textView.setTextColor(tab == TAB_MODELS ? Theme.getColor(Theme.key_dialogTextBlack, cell.resourcesProvider) : Color.WHITE);
                 cell.percentageView.setText(percent);
+                // DEMO catalog entries without rarity data would otherwise show an empty pill (stock ones always have text)
+                cell.percentageView.setVisibility(TextUtils.isEmpty(percent) ? View.GONE : View.VISIBLE);
                 cell.rarityColor = rarityColor[0];
                 cell.checkPercentageViewBackground();
             }

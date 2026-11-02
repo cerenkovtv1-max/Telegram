@@ -2770,6 +2770,11 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             invalidate();
         }
 
+        /** DEMO hook: stops the 2.5s auto-rotation so a deliberately picked set of traits stays exactly as shown. */
+        public void stopPreviewRotation() {
+            AndroidUtilities.cancelRunOnUIThread(checkToRotateRunnable);
+        }
+
         private TLObject wearPreviewObject;
         private float wearImageTx, wearImageTy, wearImageScale;
         public void setWearPreview(TLObject object) {

@@ -168,6 +168,8 @@ import org.telegram.ui.Components.ViewPagerFixed;
 import org.telegram.ui.Components.spoilers.SpoilersTextView;
 import org.telegram.ui.DialogsActivity;
 import org.telegram.ui.Stars.demo.DemoGiftConfig;
+import org.telegram.ui.Stars.demo.DemoSheetHost;
+import org.telegram.ui.Stars.demo.DemoText;
 import org.telegram.ui.Stars.demo.DemoUpgrade;
 import org.telegram.ui.Gifts.GiftMessageBottomSheet;
 import org.telegram.ui.Gifts.GiftMessageView;
@@ -229,6 +231,10 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     private UpgradePricesSheet upgradeSheet;
 
     private boolean upgradedOnce = false;
+
+    // Local DEMO mode (null = stock behaviour). Set through setDemoHost(); see ui.Stars.demo.DemoSheetHost.
+    private DemoSheetHost demoHost;
+    private TL_stars.StarGift demoBaseGift;
 
     private final LinearLayout upgradeLayout;
     private final AffiliateProgramFragment.FeatureCell[] upgradeFeatureCells;
@@ -925,6 +931,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     }
 
     private void openCrafting(boolean clear) {
+        if (blockedInDemo()) return;
         int can_craft_at = 0;
         if (messageObject != null) {
             if (messageObject.messageOwner != null && messageObject.messageOwner.action instanceof TLRPC.TL_messageActionStarGiftUnique) {
@@ -1074,6 +1081,10 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
 
     private ResaleGiftsFragment.SelectGiftSheet.State giftsToCraft;
     private void onMenuPressed(View btn) {
+        if (demoHost != null) {
+            showDemoMenu(btn);
+            return;
+        }
         final String link = getLink();
         final TL_stars.TL_starGiftUnique giftUnique = getUniqueGift();
         // in landscape the sheet is centered: popup is positioned in window coordinates
@@ -1140,6 +1151,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     }
 
     private void showGiftOfferSheet() {
+        if (blockedInDemo()) return;
         final TL_stars.TL_starGiftUnique giftUnique = getUniqueGift();
         new GiftOfferSheet(getContext(), currentAccount, DialogObject.getPeerDialogId(giftUnique.owner_id), giftUnique, resourcesProvider, () -> {
             if (closeParentSheet != null) {
@@ -1164,6 +1176,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     }
 
     private void openSetAsTheme() {
+        if (blockedInDemo()) return;
         dismiss();
 
         final BaseFragment lastFragment = LaunchActivity.getSafeLastFragment();
@@ -1203,6 +1216,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     private ColoredImageSpan lockSpan;
     private boolean shownWearInfo;
     private void onWearPressed(View v) {
+        if (blockedInDemo()) return;
         if (UserConfig.getInstance(currentAccount).isPremium() && (isWorn(currentAccount, getUniqueGift()) || shownWearInfo)) {
             toggleWear();
             return;
@@ -1378,6 +1392,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
 
     private ShareAlert shareAlert;
     public void onSharePressed(View btn) {
+        if (blockedInDemo()) return;
         if (shareAlert != null && shareAlert.isShown()) {
             shareAlert.dismiss();
         }
@@ -1430,6 +1445,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     }
 
     public void onUpdatePriceClick(View btn) {
+        if (blockedInDemo()) return;
         final TL_stars.TL_starGiftUnique gift = getUniqueGift();
         if (gift == null) return;
         StarsIntroActivity.showGiftResellPriceSheet(getContext(), currentAccount, gift, null, (price, done) -> {
@@ -1467,6 +1483,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     }
 
     public void onResellPressed(View btn) {
+        if (blockedInDemo()) return;
         if (btn.getAlpha() < 0.99f) {
             cantWithBlockchainGiftAlert(1);
             return;
@@ -2087,6 +2104,25 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
         public final ImageView optionsView;
         private boolean showOptions;
         private Boolean optionsViewLight;
+
+        private TextView demoBadge;
+
+        /** The "DEMO" tag of the local DEMO screens (top centre, clear of the close and "..." buttons). */
+        public void setDemoBadge(boolean show) {
+            if (show && demoBadge == null) {
+                demoBadge = new TextView(getContext());
+                demoBadge.setText(DemoText.demoBadge());
+                demoBadge.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
+                demoBadge.setTypeface(AndroidUtilities.bold());
+                demoBadge.setTextColor(0xFFFFFFFF);
+                demoBadge.setPadding(dp(8), dp(3), dp(8), dp(3));
+                demoBadge.setBackground(Theme.createRoundRectDrawable(dp(10), 0x99000000));
+                addView(demoBadge, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL, 0, 12, 0, 0));
+            }
+            if (demoBadge != null) {
+                demoBadge.setVisibility(show ? View.VISIBLE : View.GONE);
+            }
+        }
 
         public void setShowOptions(boolean show) {
             // the "..." menu also carries the local DEMO Upgrade entry, so it is shown even where the stock menu would be empty
@@ -4751,6 +4787,8 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
                 button.setText(getString(R.string.OK), !firstSet);
                 button.setSubText(null, !firstSet);
                 button.setOnClickListener(v -> onBackPressed());
+            } else if (demoHost != null) {
+                demoApplyResultButton();
             } else if (!isMine(currentAccount, DialogObject.getPeerDialogId(gift.owner_id)) && gift.resell_amount != null) {
                 button.setFilled(true);
                 setButtonTextResale(gift);
@@ -4802,7 +4840,9 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
                 topView.imageLayout.setAlpha(1.0f);
                 topView.imagesRollView.setAlpha(0.0f);
 
-                if (upgradedOnce && viewPager != null && giftsList != null && getListPosition() >= 0 && giftsList.findGiftToUpgrade(getListPosition()) >= 0) {
+                if (demoHost != null) {
+                    demoApplyResultButton();
+                } else if (upgradedOnce && viewPager != null && giftsList != null && getListPosition() >= 0 && giftsList.findGiftToUpgrade(getListPosition()) >= 0) {
                     button.setFilled(false);
                     final int index = giftsList.findGiftToUpgrade(getListPosition());
                     SpannableStringBuilder sb = new SpannableStringBuilder();
@@ -4832,11 +4872,20 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
                 if (getGift() != null) {
                     product = getGift().title + " #" + LocaleController.formatNumber(getGift().num, ',');
                 }
-                getBulletinFactory()
-                    .createSimpleBulletin(R.raw.gift_upgrade, getString(R.string.Gift2UpgradedTitle), AndroidUtilities.replaceTags(formatString(R.string.Gift2UpgradedText, product)))
-                    .setDuration(Bulletin.DURATION_PROLONG)
-                    .ignoreDetach()
-                    .show();
+                if (demoHost != null) {
+                    // never claim a real upgrade happened
+                    getBulletinFactory()
+                        .createSimpleBulletin(R.raw.gift_upgrade, DemoText.upgradedBulletinTitle(), DemoText.upgradedBulletinText())
+                        .setDuration(Bulletin.DURATION_PROLONG)
+                        .ignoreDetach()
+                        .show();
+                } else {
+                    getBulletinFactory()
+                        .createSimpleBulletin(R.raw.gift_upgrade, getString(R.string.Gift2UpgradedTitle), AndroidUtilities.replaceTags(formatString(R.string.Gift2UpgradedText, product)))
+                        .setDuration(Bulletin.DURATION_PROLONG)
+                        .ignoreDetach()
+                        .show();
+                }
 
                 if (fireworksOverlay != null) {
                     fireworksOverlay.start(true);
@@ -4860,6 +4909,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     }
 
     private void showDeleteDescriptionAlert(CharSequence text) {
+        if (blockedInDemo()) return;
         final TL_stars.TL_starGiftUnique gift = getUniqueGift();
         final TL_stars.InputSavedStarGift inputGift = getInputStarGift();
         if (inputGift == null || gift == null) return;
@@ -4999,7 +5049,12 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             topView.imagesRollView.setVisibility(View.INVISIBLE);
         }
 
-        actionView.set(currentAccount, savedStarGift);
+        if (demoHost != null) {
+            // the stock "you upgraded this gift on ..." line would claim a real action
+            actionView.setVisibility(View.GONE);
+        } else {
+            actionView.set(currentAccount, savedStarGift);
+        }
 
         final String name = DialogObject.getShortName(dialogId);
 
@@ -5175,6 +5230,10 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             afterTableTextView.setText(AndroidUtilities.replaceArrows(AndroidUtilities.replaceSingleTag(getString(R.string.Gift2InBlockchain), () -> {
                 Browser.openUrlInSystemBrowser(getContext(), MessagesController.getInstance(currentAccount).tonBlockchainExplorerUrl + gift_address);
             }), true, dp(8f / 3f), dp(.66f)));
+            afterTableTextView.setVisibility(View.VISIBLE);
+        } else if (demoHost != null) {
+            // DEMO: instead of the real "show / hide in profile" link, the DEMO notice (and, on the result, its actions)
+            afterTableTextView.setText(demoFooter());
             afterTableTextView.setVisibility(View.VISIBLE);
         } else if (myProfile && isMine(currentAccount, dialogId)) {
             if (dialogId >= 0) {
@@ -5741,6 +5800,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     }
 
     private void openInProfile() {
+        if (blockedInDemo()) return;
         final long dialogId = getDialogId();
         if (dialogId == 0) return;
         openProfile(dialogId);
@@ -5810,6 +5870,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     }
 
     private void convert() {
+        if (blockedInDemo()) return;
         final long selfId = UserConfig.getInstance(currentAccount).getClientUserId();
         final long fromId;
         final long dialogId;
@@ -5946,6 +6007,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     }
 
     private void deleteGift() {
+        if (blockedInDemo()) return;
         final TL_stars.InputSavedStarGift inputStarGift = getInputStarGift();
         if (inputStarGift == null) return;
         final long selfId = UserConfig.getInstance(currentAccount).getClientUserId();
@@ -6023,6 +6085,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     }
 
     private void toggleShow() {
+        if (blockedInDemo()) return;
         if (button.isLoading()) return;
 
         final boolean saved;
@@ -6122,6 +6185,11 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
         }
         if (roller != null) {
             roller.detach();
+        }
+        if (demoHost != null) {
+            final DemoSheetHost host = demoHost;
+            demoHost = null;
+            host.onDismissed();
         }
         super.dismiss();
     }
@@ -6257,6 +6325,11 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
         if (switchingPagesAnimator != null) {
             return;
         }
+        if (demoHost != null) {
+            // Local DEMO: no preview/payment-form request, the host drives the picker instead.
+            demoHost.onUpgradePressed(this);
+            return;
+        }
 
         long paid_stars;
         long gift_id;
@@ -6357,6 +6430,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     }
 
     private void openUpgradeAfter() {
+        if (demoHost != null) return; // DEMO has its own upgrade page (demoShowUpgradePage)
         long stars;
         boolean prepaying;
         TL_stars.StarGift stargift;
@@ -6670,7 +6744,156 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
         return 0;
     }
 
+    // ------------------------------------------------------------------------------------------------------------
+    // Local DEMO mode. Everything below is reachable only after setDemoHost(); the stock flow is untouched.
+    // The sheet keeps its own pages, transitions and Roller; only the steps that would reach the server are replaced
+    // by the host, and every real action is blocked (blockedInDemo()).
+    // ------------------------------------------------------------------------------------------------------------
+
+    /** Turns this sheet into the local DEMO (host != null) or back into the stock sheet (null). */
+    public StarGiftSheet setDemoHost(DemoSheetHost host, TL_stars.StarGift baseGift) {
+        this.demoHost = host;
+        this.demoBaseGift = baseGift;
+        topView.setDemoBadge(host != null);
+        return this;
+    }
+
+    public boolean isDemo() {
+        return demoHost != null;
+    }
+
+    /** In DEMO a real action (transfer, sell, wear, show/hide, craft, ...) must not run: says so and returns true. */
+    private boolean blockedInDemo() {
+        if (demoHost == null) {
+            return false;
+        }
+        getBulletinFactory().createSimpleBulletin(R.raw.info, DemoText.blocked()).show();
+        return true;
+    }
+
+    /**
+     * The stock "Upgrade Gift" page, showing exactly the traits picked in the DEMO picker. Its button runs the local
+     * roll; the roll pool is the picked gift's own attributes.
+     */
+    public void demoShowUpgradePage(StarGiftPreviewSheet.Attributes chosen, ArrayList<TL_stars.StarGiftAttribute> pool) {
+        if (demoHost == null || savedStarGift == null || switchingPagesAnimator != null) {
+            return;
+        }
+        sample_attributes = pool;
+        if (roller != null) {
+            roller.detach();
+        }
+        roller = new Roller(topView);
+        roller.preload(pool);
+        topView.setPreviewingAttributes(chosen.toList());
+        topView.stopPreviewRotation();
+        topView.setText(1, getString(R.string.Gift2UpgradeTitle), DemoText.chosenLine(chosen.model.name, chosen.backdrop.name, chosen.pattern.name), null, null);
+
+        button.setFilled(true);
+        button.setLoading(false);
+        button.setSubText(null, true);
+        button.setText(DemoText.upgradeButton(), true);
+        button.setOnClickListener(v -> demoConfirmUpgrade());
+        underButtonContainer.setVisibility(View.GONE);
+        updateUnderButtonContainer();
+        checkboxLayout.setVisibility(View.GONE);
+        checkboxSeparator.setVisibility(View.GONE);
+        upgradeFeatureCells[0].set(R.drawable.menu_feature_unique, getString(R.string.Gift2UpgradeFeature1Title), getString(R.string.GiftsFeature1Text));
+        upgradeFeatureCells[1].set(R.drawable.menu_feature_tradable, getString(R.string.Gift2UpgradeFeature3Title), getString(R.string.GiftsFeature2Text));
+        upgradeFeatureCells[2].set(R.drawable.menu_wear, getString(R.string.GiftsFeature3Title), getString(R.string.GiftsFeature3Text));
+
+        AndroidUtilities.runOnUIThread(() -> switchPage(PAGE_UPGRADE, true));
+    }
+
+    /**
+     * The same in-place switch the real flow makes when the upgraded gift arrives (applyNewGiftFromUpdates), without
+     * any request: the collectible built by the host replaces the base gift and the stock Roller plays the roll.
+     */
+    private void demoConfirmUpgrade() {
+        if (demoHost == null || savedStarGift == null || button.isLoading()) {
+            return;
+        }
+        final TL_stars.TL_starGiftUnique unique = demoHost.onConfirmUpgrade();
+        if (unique == null) {
+            return;
+        }
+        button.setLoading(true);
+        rolling = true;
+        savedStarGift.gift = unique;
+        savedStarGift.can_upgrade = false;
+        savedStarGift.upgrade_stars = 0;
+        savedStarGift.name_hidden = true; // no "from <name>" line: the subtitle is the model name, as in the original
+        set(savedStarGift, giftsList);
+        sample_attributes = null;
+        rolling = false;
+        AndroidUtilities.runOnUIThread(() -> {
+            button.setLoading(false);
+            switchPage(PAGE_INFO, true);
+        });
+    }
+
+    /** Presses the DEMO "Upgrade" button of the upgrade page (used by Repeat). */
+    public void demoRunUpgrade() {
+        demoConfirmUpgrade();
+    }
+
+    /** Back to the base-gift page as it was before the upgrade (used by Edit and Repeat). */
+    public void demoRestoreBaseGift() {
+        if (demoHost == null || demoBaseGift == null || savedStarGift == null) {
+            return;
+        }
+        if (roller != null) {
+            roller.detach();
+            roller = null;
+        }
+        topView.imageLayout.setAlpha(1.0f);
+        topView.imagesRollView.setAlpha(0.0f);
+        rolling = false;
+        savedStarGift.gift = demoBaseGift;
+        savedStarGift.can_upgrade = true;
+        savedStarGift.name_hidden = false;
+        set(savedStarGift, giftsList);
+    }
+
+    /** The DEMO main button on the result page. */
+    private void demoApplyResultButton() {
+        button.setFilled(true);
+        button.setText(DemoText.repeatButton(), true);
+        button.setSubText(null, true);
+        button.setOnClickListener(v -> demoHost.onRepeat(this));
+    }
+
+    /** The grey text under the table: the DEMO notice, and on the result page the three DEMO actions as links. */
+    private CharSequence demoFooter() {
+        final SpannableStringBuilder sb = new SpannableStringBuilder(DemoText.resultNotice());
+        if (savedStarGift != null && savedStarGift.gift instanceof TL_stars.TL_starGiftUnique) {
+            sb.append("\n");
+            sb.append(AndroidUtilities.replaceSingleTag("**" + DemoText.edit() + "**", () -> demoHost.onEdit(this)));
+            sb.append("  •  ");
+            sb.append(AndroidUtilities.replaceSingleTag("**" + DemoText.repeat() + "**", () -> demoHost.onRepeat(this)));
+            sb.append("  •  ");
+            sb.append(AndroidUtilities.replaceSingleTag("**" + DemoText.pickAnotherGift() + "**", () -> demoHost.onPickAnotherGift(this)));
+        }
+        return sb;
+    }
+
+    /** The "..." menu in DEMO: only the DEMO actions. */
+    private void showDemoMenu(View btn) {
+        final int[] containerLocation = new int[2];
+        container.getLocationInWindow(containerLocation);
+        ItemOptions.makeOptions(container, resourcesProvider, btn)
+            .add(R.drawable.msg_edit, DemoText.edit(), () -> demoHost.onEdit(this))
+            .add(R.drawable.msg_retry, DemoText.repeat(), () -> demoHost.onRepeat(this))
+            .add(R.drawable.menu_gift, DemoText.pickAnotherGift(), () -> demoHost.onPickAnotherGift(this))
+            .setDrawScrim(false)
+            .setOnTopOfScrim()
+            .setDimAlpha(0)
+            .translate(containerLocation[0] + backgroundPaddingLeft, -dp(2))
+            .show();
+    }
+
     private void doUpgrade() {
+        if (demoHost != null) return; // DEMO never reaches the real upgrade (payment) code
         if (button.isLoading()) return;
 
         long stars;
@@ -6875,6 +7098,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     }
 
     public void onTransferClick(View view) {
+        if (blockedInDemo()) return;
         if (view.getAlpha() < 0.99f) {
             cantWithBlockchainGiftAlert(0);
             return;
@@ -6883,6 +7107,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     }
 
     public void openTransfer() {
+        if (blockedInDemo()) return;
         if (currentHintView != null) {
             currentHintView.hide();
             currentHintView = null;
@@ -7952,6 +8177,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     }
 
     public void onBuyPressed() {
+        if (blockedInDemo()) return;
         final TL_stars.TL_starGiftUnique gift = getUniqueGift();
         if (button.isLoading() || gift == null) return;
 

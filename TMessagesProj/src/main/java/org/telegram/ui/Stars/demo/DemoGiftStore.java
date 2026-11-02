@@ -31,8 +31,6 @@ public final class DemoGiftStore {
         public long patternDocumentId;
         public String backdropName;
         public int backdropId;
-        /** True when the backdrop came from the client's built-in table, i.e. its server id is unknown. */
-        public boolean backdropBuiltIn;
         public int backdropCenter, backdropEdge, backdropPattern, backdropText;
     }
 
@@ -76,7 +74,6 @@ public final class DemoGiftStore {
             o.put("patternDocumentId", record.patternDocumentId);
             o.put("backdropName", record.backdropName);
             o.put("backdropId", record.backdropId);
-            o.put("backdropBuiltIn", record.backdropBuiltIn);
             o.put("center", record.backdropCenter);
             o.put("edge", record.backdropEdge);
             o.put("pattern", record.backdropPattern);

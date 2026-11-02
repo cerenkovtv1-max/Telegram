@@ -9,7 +9,7 @@ import java.util.Locale;
  * User-visible strings of the local DEMO editor. Russian unless the app language is English (the DEMO is a recording
  * tool, so its labels are not part of the translated stock string table).
  */
-final class DemoText {
+public final class DemoText {
 
     private DemoText() {
     }
@@ -27,19 +27,10 @@ final class DemoText {
         return english() ? en : ru;
     }
 
-    static String menuItem() {
+    // ---- entry / catalog ----
+
+    public static String menuItem() {
         return "DEMO Upgrade";
-    }
-
-    static String loadingCatalog() {
-        return t("Загрузка каталога…", "Loading catalog…");
-    }
-
-    static String catalogUnavailable() {
-        return t(
-            "Каталог недоступен: сервер не отдал подарки или их атрибуты. Войдите в аккаунт, проверьте сеть и повторите.",
-            "Catalog unavailable: the server returned no gifts or attributes. Sign in, check the network and try again."
-        );
     }
 
     static String pickGiftTitle() {
@@ -50,83 +41,14 @@ final class DemoText {
         return t("Поиск", "Search");
     }
 
-    static String upgrade() {
-        return t("Улучшить", "Upgrade");
+    static String giftsLine(int gifts) {
+        return t("Подарков с улучшением: " + gifts, "Upgradable gifts: " + gifts);
     }
 
-    static String upgradeDemo() {
-        return t("Улучшить (DEMO)", "Upgrade (DEMO)");
-    }
-
-    static String edit() {
-        return t("Изменить", "Edit");
-    }
-
-    static String repeat() {
-        return t("Повторить", "Repeat");
-    }
-
-    static String pickAnotherGift() {
-        return t("Выбрать другой подарок", "Choose another gift");
-    }
-
-    static String statusSelected() {
-        return t("DEMO • выбрано вручную", "DEMO • picked manually");
-    }
-
-    static String demoBadge() {
-        return "DEMO";
-    }
-
-    static String resultNotice() {
+    static String skippedGifts(int count) {
         return t(
-            "DEMO • локальный результат. Это не настоящий NFT: Stars не списаны, подарки и аккаунт не изменены.",
-            "DEMO • local result. This is not a real NFT: no Stars were spent, gifts and account are untouched."
-        );
-    }
-
-    static String resultSubtitle() {
-        return t("DEMO • локальный результат", "DEMO • local result");
-    }
-
-    static String savedLocally(int count) {
-        return t(
-            "Сохранено локально (отдельно от настоящих подарков): " + count,
-            "Saved locally (separate from real gifts): " + count
-        );
-    }
-
-    static String modelLabel() {
-        return t("Модель", "Model");
-    }
-
-    static String backdropLabel() {
-        return t("Фон", "Backdrop");
-    }
-
-    static String symbolLabel() {
-        return t("Символ", "Symbol");
-    }
-
-    static String fromGift(String giftTitle) {
-        return t("из «" + giftTitle + "»", "from “" + giftTitle + "”");
-    }
-
-    static String builtinBackdropNote() {
-        return t("встроенный фон, серверный ID неизвестен", "built-in backdrop, server id unknown");
-    }
-
-    static String catalogLine(int gifts, int models, int backdrops, int symbols) {
-        return t(
-            "Подарков: " + gifts + " • моделей: " + models + " • фонов: " + backdrops + " • символов: " + symbols,
-            "Gifts: " + gifts + " • models: " + models + " • backdrops: " + backdrops + " • symbols: " + symbols
-        );
-    }
-
-    static String noUpgradeData(int count) {
-        return t(
-            "Без данных об атрибутах (нет улучшения или сервер не ответил): " + count,
-            "No attribute data (not upgradable or no server reply): " + count
+            "Скрыто подарков, которые нельзя улучшить: " + count,
+            "Hidden gifts that cannot be upgraded: " + count
         );
     }
 
@@ -134,8 +56,105 @@ final class DemoText {
         return t("Не удалось загрузить список подарков.", "Could not load the gift list.");
     }
 
+    static String noTraits(String giftTitle) {
+        return t(
+            "Для «" + giftTitle + "» сервер не отдал модели, фоны или узоры. Показывать нечего: выдумывать их я не буду.",
+            "The server returned no models, backdrops or symbols for “" + giftTitle + "”. Nothing to show, and none are made up."
+        );
+    }
+
+    // ---- wizard ----
+
+    static String stepModel() {
+        return t("Модель", "Model");
+    }
+
+    static String stepBackdrop() {
+        return t("Фон", "Backdrop");
+    }
+
+    static String stepSymbol() {
+        return t("Узор", "Symbol");
+    }
+
+    static String nextBackdrop() {
+        return t("Далее: фон", "Next: backdrop");
+    }
+
+    static String nextSymbol() {
+        return t("Далее: узор", "Next: symbol");
+    }
+
+    static String done() {
+        return t("Готово", "Done");
+    }
+
+    static String statusStep(int step, String giftTitle) {
+        return t(
+            "DEMO • шаг " + (step + 1) + " из 3 • только варианты «" + giftTitle + "»",
+            "DEMO • step " + (step + 1) + " of 3 • only “" + giftTitle + "” variants"
+        );
+    }
+
+    // ---- confirm page (stock "Upgrade Gift" page) ----
+
+    public static String upgradeButton() {
+        return t("Улучшить (DEMO)", "Upgrade (DEMO)");
+    }
+
+    public static String chosenLine(String model, String backdrop, String symbol) {
+        return t(
+            "DEMO • выбрано: " + model + " • " + backdrop + " • " + symbol,
+            "DEMO • picked: " + model + " • " + backdrop + " • " + symbol
+        );
+    }
+
+    // ---- result page ----
+
+    public static String repeatButton() {
+        return t("Повторить (DEMO)", "Repeat (DEMO)");
+    }
+
+    public static String edit() {
+        return t("Изменить", "Edit");
+    }
+
+    public static String repeat() {
+        return t("Повторить", "Repeat");
+    }
+
+    public static String pickAnotherGift() {
+        return t("Выбрать другой подарок", "Choose another gift");
+    }
+
+    public static String resultNotice() {
+        return t(
+            "DEMO • локальный результат. Это не настоящий NFT: Stars не списаны, подарки и аккаунт не изменены.",
+            "DEMO • local result. This is not a real NFT: no Stars were spent, gifts and account are untouched."
+        );
+    }
+
+    public static String blocked() {
+        return t("В DEMO это действие недоступно", "Not available in DEMO");
+    }
+
+    public static String demoBadge() {
+        return "DEMO";
+    }
+
+    public static String upgradedBulletinTitle() {
+        return t("DEMO: улучшение показано", "DEMO: upgrade shown");
+    }
+
+    public static String upgradedBulletinText() {
+        return t(
+            "Это локальная демонстрация, настоящий подарок не создан.",
+            "This is a local demonstration, no real gift was created."
+        );
+    }
+
     /** The name of a base gift as the server sent it; the numeric id only when the server sent no title. */
-    static String giftLabel(TL_stars.StarGift gift) {
+    public static String giftLabel(TL_stars.StarGift gift) {
         if (gift != null && gift.title != null && !gift.title.isEmpty()) {
             return gift.title;
         }

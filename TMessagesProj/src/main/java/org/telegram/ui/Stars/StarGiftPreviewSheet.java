@@ -396,6 +396,7 @@ public class StarGiftPreviewSheet extends BottomSheetWithRecyclerListView {
         tabsSelectorView = new TabsSelectorView(context, resourcesProvider, tab -> {
             itemAnimator.endAnimations();
             adapter.update(true);
+            onStepChanged(tab);
         });
 
         for (int i = 0; i < buttons.length; ++i) {
@@ -647,6 +648,19 @@ public class StarGiftPreviewSheet extends BottomSheetWithRecyclerListView {
     protected void setExtraBottomPadding(int px) {
         extraBottomPadding = px;
         recyclerListView.setPadding(dp(16), 0, dp(16), lastBottomInset + dp(56 + 9 + 9) + extraBottomPadding);
+    }
+
+    /** Called after the Models / Backdrops / Symbols tab changed (0 / 1 / 2), by a tap or by {@link #selectStep}. */
+    protected void onStepChanged(int tab) {
+    }
+
+    /** Switches the grid to a tab (0 = models, 1 = backdrops, 2 = symbols) exactly like tapping it. */
+    public void selectStep(int tab) {
+        tabsSelectorView.selectTab(tab);
+    }
+
+    public int getSelectedStep() {
+        return tabsSelectorView.getSelectedTab();
     }
 
     protected FrameLayout getHeaderView() {

@@ -63,15 +63,15 @@ final class DemoGiftPickerSheet {
         root.addView(title, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER, 20, 18, 20, 4));
 
         final TextView counts = new TextView(context);
-        counts.setText(DemoText.catalogLine(catalog.gifts.size(), catalog.models.size(), catalog.backdrops.size(), catalog.patterns.size()));
+        counts.setText(DemoText.giftsLine(catalog.gifts.size()));
         counts.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
         counts.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText, resourcesProvider));
         counts.setGravity(Gravity.CENTER);
         root.addView(counts, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER, 20, 0, 20, 0));
 
-        if (catalog.giftsNotUpgradable + catalog.giftsPreviewFailed > 0) {
+        if (catalog.skippedGifts > 0) {
             final TextView note = new TextView(context);
-            note.setText(DemoText.noUpgradeData(catalog.giftsNotUpgradable + catalog.giftsPreviewFailed));
+            note.setText(DemoText.skippedGifts(catalog.skippedGifts));
             note.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
             note.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText, resourcesProvider));
             note.setGravity(Gravity.CENTER);
@@ -96,9 +96,8 @@ final class DemoGiftPickerSheet {
             if (position < 0 || position >= shown.size()) {
                 return;
             }
-            final TL_stars.StarGift gift = shown.get(position);
-            sheet.dismiss();
-            onPick.onPick(gift);
+            // the sheet stays open until the caller has something to show (a gift without data keeps the list available)
+            onPick.onPick(shown.get(position));
         });
         // BottomSheet wraps its custom view, so the grid needs a definite height of its own.
         final int listHeight = Math.min(dp(520), (int) (AndroidUtilities.displaySize.y * 0.62f));
@@ -109,6 +108,10 @@ final class DemoGiftPickerSheet {
 
     void show() {
         sheet.show();
+    }
+
+    void dismiss() {
+        sheet.dismiss();
     }
 
     private void applyFilter(String query) {

@@ -6,14 +6,13 @@ import android.widget.Toast;
 import org.telegram.tgnet.tl.TL_stars;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.Theme;
-import org.telegram.ui.Stars.StarGiftPreviewSheet;
 
 /**
  * Entry point of the local DEMO gift editor ("DEMO Upgrade"). Opened from the gift screen's menu; completely separate
- * from the real upgrade flow ({@code StarGiftSheet.openUpgrade}), which it never calls and whose requests it never builds.
+ * from the real upgrade flow ({@code StarGiftSheet.openUpgrade}), which it never reaches in DEMO mode.
  *
- * <p>Flow: load the catalog (read-only) -> {@link DemoGiftPickerSheet} (gift) -> {@link DemoGiftEditorSheet}
- * (model / backdrop / symbol, then "Upgrade") -> {@link DemoResultSheet} (Edit / Repeat / Choose another gift).
+ * <p>Flow: load the gift list (read-only) -> {@link DemoGiftPickerSheet} (pick a gift) -> load that gift's own traits
+ * (read-only) -> {@link DemoSession}: the real gift screen in DEMO mode.
  */
 public final class DemoUpgrade {
 
@@ -33,7 +32,7 @@ public final class DemoUpgrade {
         }
         final DemoGiftCatalog catalog = DemoGiftCatalog.forAccount(account);
         if (catalog.isReady()) {
-            open(context, resourcesProvider, account, catalog);
+            openPicker(context, resourcesProvider, account, catalog);
             return;
         }
 
@@ -45,44 +44,41 @@ public final class DemoUpgrade {
             loading = false;
         });
         progress.showDelayed(150);
-        catalog.load(new DemoGiftCatalog.Listener() {
-            @Override
-            public void onProgress(int done, int total) {
-                // the spinner is enough; the counts are shown on the picker
-            }
-
-            @Override
-            public void onReady(DemoGiftCatalog ready) {
-                loading = false;
-                progress.dismiss();
-                open(context, resourcesProvider, account, ready);
-            }
+        catalog.load(ready -> {
+            loading = false;
+            progress.dismiss();
+            openPicker(context, resourcesProvider, account, ready);
         });
     }
 
-    private static void open(Context context, Theme.ResourcesProvider resourcesProvider, int account, DemoGiftCatalog catalog) {
+    private static void openPicker(Context context, Theme.ResourcesProvider resourcesProvider, int account, DemoGiftCatalog catalog) {
         if (catalog.gifts.isEmpty()) {
             Toast.makeText(context, DemoText.giftsLoadFailed(), Toast.LENGTH_LONG).show();
             return;
         }
-        if (!catalog.isUsable()) {
-            // Gifts are known but their models / symbols (server-delivered stickers) are not: say so, do not fake them.
-            Toast.makeText(
-                context,
-                DemoText.catalogUnavailable() + "\n" + DemoText.catalogLine(catalog.gifts.size(), catalog.models.size(), catalog.backdrops.size(), catalog.patterns.size()),
-                Toast.LENGTH_LONG
-            ).show();
-            return;
-        }
-        new DemoGiftPickerSheet(context, resourcesProvider, account, catalog, gift -> openEditor(context, resourcesProvider, account, catalog, gift)).show();
+        final DemoGiftPickerSheet[] picker = new DemoGiftPickerSheet[1];
+        picker[0] = new DemoGiftPickerSheet(context, resourcesProvider, account, catalog, gift -> openGift(context, resourcesProvider, account, catalog, gift, () -> picker[0].dismiss()));
+        picker[0].show();
     }
 
-    private static void openEditor(Context context, Theme.ResourcesProvider resourcesProvider, int account, DemoGiftCatalog catalog, TL_stars.StarGift gift) {
-        final StarGiftPreviewSheet.Attributes initial = catalog.defaultsFor(gift);
-        if (initial == null) {
-            Toast.makeText(context, DemoText.catalogUnavailable(), Toast.LENGTH_LONG).show();
+    /** Loads the picked gift's own traits and opens the real gift screen in DEMO mode for it. */
+    private static void openGift(Context context, Theme.ResourcesProvider resourcesProvider, int account, DemoGiftCatalog catalog, TL_stars.StarGift gift, Runnable whenOpened) {
+        if (loading) {
             return;
         }
-        new DemoGiftEditorSheet(context, resourcesProvider, account, catalog, gift, initial).show();
+        loading = true;
+        final AlertDialog progress = new AlertDialog(context, AlertDialog.ALERT_TYPE_SPINNER, resourcesProvider);
+        progress.showDelayed(150);
+        catalog.loadTraits(gift, traits -> {
+            loading = false;
+            progress.dismiss();
+            if (traits == null || !traits.isUsable()) {
+                // Nothing to show for this gift: say so, do not fall back to other gifts' traits.
+                Toast.makeText(context, DemoText.noTraits(DemoText.giftLabel(gift)), Toast.LENGTH_LONG).show();
+                return;
+            }
+            whenOpened.run();
+            new DemoSession(context, account, resourcesProvider, gift, traits).open();
+        });
     }
 }

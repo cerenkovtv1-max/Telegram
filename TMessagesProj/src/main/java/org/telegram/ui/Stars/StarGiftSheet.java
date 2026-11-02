@@ -6928,17 +6928,47 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
         new StarGiftPreviewSheet(getContext(), resourcesProvider, currentAccount, DemoText.giftLabel(demoBaseGift), demoHost.allVariants(), false).show();
     }
 
-    /** "~$N": an estimate from the gift's own market data (collection floor in Stars, else its price), at the client's Stars rate. */
+    /**
+     * "~$N": an estimate, different for every gift and every result. Base: the gift's own market floor in Stars when it
+     * has one, otherwise its price; multiplied by how rare the picked traits are (demoRarityMultiplier); converted at
+     * the client's Stars rate, like the stock Stars screens do. It is not a real appraisal.
+     */
     private CharSequence demoValueText() {
         if (demoBaseGift == null) {
             return null;
         }
-        final long stars = Math.max(demoBaseGift.resell_min_stars, demoBaseGift.stars);
-        if (stars <= 0) {
+        final long floorStars = demoBaseGift.resell_min_stars > 0 ? demoBaseGift.resell_min_stars : demoBaseGift.stars;
+        if (floorStars <= 0) {
             return null;
         }
+        final double stars = floorStars * demoRarityMultiplier();
         final long cents = (long) (stars / 1000.0 * MessagesController.getInstance(currentAccount).starsUsdWithdrawRate1000);
         return "~" + BillingController.getInstance().formatCurrency(cents, "USD");
+    }
+
+    /**
+     * 1x for common traits, up to 10x for the rarest: each of the picked model / symbol / backdrop adds 10 / permille
+     * (permille clamped to 1..100, so 0.1% counts as the rarest and 10% or more as the most common).
+     */
+    private double demoRarityMultiplier() {
+        final TL_stars.TL_starGiftUnique unique = getUniqueGift();
+        if (unique == null) {
+            return 1.0;
+        }
+        final TL_stars.StarGiftAttribute[] traits = {
+            findAttribute(unique.attributes, TL_stars.starGiftAttributeModel.class),
+            findAttribute(unique.attributes, TL_stars.starGiftAttributePattern.class),
+            findAttribute(unique.attributes, TL_stars.starGiftAttributeBackdrop.class)
+        };
+        double score = 0;
+        for (TL_stars.StarGiftAttribute trait : traits) {
+            if (trait == null) {
+                continue;
+            }
+            final int permille = Math.max(1, Math.min(100, trait.getRarityPermille()));
+            score += 10.0 / permille;
+        }
+        return Math.min(10.0, 1.0 + 0.6 * score);
     }
 
     /** The grey line under the table: "hidden from profile", like the original (its link is blocked in DEMO). */

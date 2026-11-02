@@ -137,17 +137,17 @@ public final class DemoText {
     }
 
     public static String demoBadge() {
-        return "DEMO";
+        return "";
     }
 
     public static String upgradedBulletinTitle() {
-        return t("DEMO: улучшение показано", "DEMO: upgrade shown");
+        return t("", "");
     }
 
     public static String upgradedBulletinText() {
         return t(
-            "Это локальная демонстрация, настоящий подарок не создан.",
-            "This is a local demonstration, no real gift was created."
+            "",
+            ""
         );
     }
 

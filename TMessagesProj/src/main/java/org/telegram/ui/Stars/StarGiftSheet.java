@@ -1092,7 +1092,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
         container.getLocationInWindow(containerLocation);
         ItemOptions.makeOptions(container, resourcesProvider, btn)
             // Local DEMO gift editor: a separate screen that never calls openUpgrade() or sends any request.
-            .addIf(DemoGiftConfig.ENABLED, R.drawable.menu_gift, DemoUpgrade.menuTitle(), () -> DemoUpgrade.start(getContext(), currentAccount, resourcesProvider))
+            .addIf(DemoGiftConfig.ENABLED, R.drawable.menu_gift, DemoUpgrade.menuTitle(), this::openDemoUpgrade)
             .addIf(getUniqueGift() != null && isMineWithActions(currentAccount, DialogObject.getPeerDialogId(getUniqueGift().owner_id)) && giftsList instanceof StarsController.GiftsList && savedStarGift != null && getInputStarGift() != null, (savedStarGift != null && savedStarGift.pinned_to_top) ? R.drawable.msg_unpin : R.drawable.msg_pin, getString((savedStarGift != null && savedStarGift.pinned_to_top) ? R.string.Gift2Unpin : R.string.Gift2Pin), () -> {
                 if (savedStarGift.unsaved) {
                     savedStarGift.unsaved = false;
@@ -6760,6 +6760,16 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
 
     public boolean isDemo() {
         return demoHost != null;
+    }
+
+    /** "DEMO Upgrade" from the menu: this gift screen closes first, so the DEMO does not stack on top of it. */
+    private void openDemoUpgrade() {
+        final Context context = getContext();
+        final int account = currentAccount;
+        final Theme.ResourcesProvider provider = resourcesProvider;
+        dismiss();
+        // let the close animation play before the DEMO appears
+        AndroidUtilities.runOnUIThread(() -> DemoUpgrade.start(context, account, provider), 250);
     }
 
     /** In DEMO a real action (transfer, sell, wear, show/hide, craft, ...) must not run: says so and returns true. */

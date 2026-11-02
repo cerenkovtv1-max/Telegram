@@ -3,12 +3,14 @@ package org.telegram.ui.Stars.demo;
 import androidx.annotation.Nullable;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.GiftAuctionController;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.tgnet.tl.TL_stars;
 import org.telegram.ui.Stars.StarGiftPreviewSheet;
 import org.telegram.ui.Stars.StarsController;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 
 /**
@@ -18,11 +20,13 @@ import java.util.HashMap;
  * <ul>
  *   <li>gifts - the stock gift list ({@link StarsController#gifts}, {@code payments.getStarGifts}); only base gifts that
  *       can be upgraded and have artwork;</li>
- *   <li>traits - the stock attribute preview of that one gift ({@link StarsController#getStarGiftPreview},
- *       {@code payments.getStarGiftUpgradePreview}): its own models, backdrops and symbols, exactly what the real
- *       upgrade screen would roll through for it.</li>
+ *   <li>traits - the full list of that one gift's models, backdrops and symbols, from the request the stock
+ *       "view all variants" screen uses ({@link GiftAuctionController#requestAuctionUpgrades},
+ *       {@code payments.getStarGiftUpgradeAttributes}). Only if that fails, the much smaller sample the upgrade
+ *       preview carries ({@link StarsController#getStarGiftPreview}, {@code payments.getStarGiftUpgradePreview},
+ *       {@link GiftTraits#partial}).</li>
  * </ul>
- * Both requests are read-only. If the server returns no traits for a gift, {@link GiftTraits} is not usable and the DEMO
+ * All requests are read-only. If the server returns no traits for a gift, {@link GiftTraits} is not usable and the DEMO
  * says so instead of showing anything made up.
  */
 public final class DemoGiftCatalog {
@@ -43,6 +47,29 @@ public final class DemoGiftCatalog {
         public final ArrayList<TL_stars.starGiftAttributeModel> models = new ArrayList<>();
         public final ArrayList<TL_stars.starGiftAttributePattern> patterns = new ArrayList<>();
         public final ArrayList<TL_stars.starGiftAttributeBackdrop> backdrops = new ArrayList<>();
+
+        /** True when only the small sample from the upgrade preview is available (the full list could not be loaded). */
+        public boolean partial;
+
+        private static final int ROLL_POOL_PER_KIND = 12;
+
+        /**
+         * What the roll passes through: a random handful of this gift's own variants, about as many as the stock upgrade
+         * preview sample carries. (The roll loads an animated sticker per model, so the full list is not used for it.)
+         */
+        public ArrayList<TL_stars.StarGiftAttribute> rollPool() {
+            final ArrayList<TL_stars.StarGiftAttribute> pool = new ArrayList<>();
+            pool.addAll(pick(backdrops));
+            pool.addAll(pick(patterns));
+            pool.addAll(pick(models));
+            return pool;
+        }
+
+        private static <T> ArrayList<T> pick(ArrayList<T> from) {
+            final ArrayList<T> copy = new ArrayList<>(from);
+            Collections.shuffle(copy);
+            return new ArrayList<>(copy.subList(0, Math.min(ROLL_POOL_PER_KIND, copy.size())));
+        }
 
         /** All three kinds are present, which is what the picker and the renderer need. */
         public boolean isUsable() {
@@ -180,29 +207,40 @@ public final class DemoGiftCatalog {
     }
 
     /**
-     * Loads the traits of exactly this gift (the stock attribute preview; cached by the client, so repeated picks are
-     * instant). The callback runs on the UI thread.
+     * Loads the traits of exactly this gift: the full list first, the small preview sample only as a fallback. The
+     * callback runs on the UI thread.
      */
     public void loadTraits(TL_stars.StarGift gift, TraitsListener callback) {
-        StarsController.getInstance(account).getStarGiftPreview(gift.id, preview -> {
-            if (preview == null || preview.sample_attributes == null) {
-                callback.onTraits(null);
+        GiftAuctionController.getInstance(account).requestAuctionUpgrades(gift.id, attributes -> {
+            if (attributes != null && !attributes.isEmpty()) {
+                callback.onTraits(buildTraits(attributes, false));
                 return;
             }
-            final GiftTraits traits = new GiftTraits();
-            for (TL_stars.StarGiftAttribute attribute : preview.sample_attributes) {
-                if (attribute instanceof TL_stars.starGiftAttributeModel && ((TL_stars.starGiftAttributeModel) attribute).document != null) {
-                    traits.models.add((TL_stars.starGiftAttributeModel) attribute);
-                } else if (attribute instanceof TL_stars.starGiftAttributePattern && ((TL_stars.starGiftAttributePattern) attribute).document != null) {
-                    traits.patterns.add((TL_stars.starGiftAttributePattern) attribute);
-                } else if (attribute instanceof TL_stars.starGiftAttributeBackdrop) {
-                    traits.backdrops.add((TL_stars.starGiftAttributeBackdrop) attribute);
+            StarsController.getInstance(account).getStarGiftPreview(gift.id, preview -> {
+                if (preview == null || preview.sample_attributes == null) {
+                    callback.onTraits(null);
+                    return;
                 }
-            }
-            traits.all.addAll(traits.backdrops);
-            traits.all.addAll(traits.patterns);
-            traits.all.addAll(traits.models);
-            callback.onTraits(traits);
+                callback.onTraits(buildTraits(preview.sample_attributes, true));
+            });
         });
+    }
+
+    private static GiftTraits buildTraits(ArrayList<TL_stars.StarGiftAttribute> source, boolean partial) {
+        final GiftTraits traits = new GiftTraits();
+        traits.partial = partial;
+        for (TL_stars.StarGiftAttribute attribute : source) {
+            if (attribute instanceof TL_stars.starGiftAttributeModel && ((TL_stars.starGiftAttributeModel) attribute).document != null) {
+                traits.models.add((TL_stars.starGiftAttributeModel) attribute);
+            } else if (attribute instanceof TL_stars.starGiftAttributePattern && ((TL_stars.starGiftAttributePattern) attribute).document != null) {
+                traits.patterns.add((TL_stars.starGiftAttributePattern) attribute);
+            } else if (attribute instanceof TL_stars.starGiftAttributeBackdrop) {
+                traits.backdrops.add((TL_stars.starGiftAttributeBackdrop) attribute);
+            }
+        }
+        traits.all.addAll(traits.backdrops);
+        traits.all.addAll(traits.patterns);
+        traits.all.addAll(traits.models);
+        return traits;
     }
 }

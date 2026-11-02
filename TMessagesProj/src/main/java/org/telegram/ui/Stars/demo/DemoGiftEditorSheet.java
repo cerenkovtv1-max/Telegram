@@ -33,6 +33,7 @@ public final class DemoGiftEditorSheet extends StarGiftPreviewSheet {
     private static final int STEPS = 3;
 
     private final String giftTitle;
+    private final boolean partial;
     private final OnDone onDone;
 
     private final FrameLayout bar;
@@ -50,6 +51,7 @@ public final class DemoGiftEditorSheet extends StarGiftPreviewSheet {
     ) {
         super(context, resourcesProvider, account, DemoText.giftLabel(gift), traits.all, false, initial, true);
         this.giftTitle = DemoText.giftLabel(gift);
+        this.partial = traits.partial;
         this.onDone = onDone;
 
         // Search over the current step's grid (names only; nothing is sent anywhere).
@@ -98,7 +100,7 @@ public final class DemoGiftEditorSheet extends StarGiftPreviewSheet {
             text = DemoText.done();
         }
         nextButton.setText(text, animated);
-        setStatusText(DemoText.statusStep(step, giftTitle));
+        setStatusText(DemoText.statusStep(step, giftTitle, partial));
     }
 
     private void onNext() {

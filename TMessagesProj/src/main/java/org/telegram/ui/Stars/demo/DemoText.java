@@ -89,10 +89,10 @@ public final class DemoText {
         return t("Готово", "Done");
     }
 
-    static String statusStep(int step, String giftTitle) {
+    static String statusStep(int step, String giftTitle, boolean partial) {
         return t(
-            "DEMO • шаг " + (step + 1) + " из 3 • только варианты «" + giftTitle + "»",
-            "DEMO • step " + (step + 1) + " of 3 • only “" + giftTitle + "” variants"
+            "DEMO • шаг " + (step + 1) + " из 3 • только варианты «" + giftTitle + "»" + (partial ? " • неполный список" : ""),
+            "DEMO • step " + (step + 1) + " of 3 • only “" + giftTitle + "” variants" + (partial ? " • partial list" : "")
         );
     }
 

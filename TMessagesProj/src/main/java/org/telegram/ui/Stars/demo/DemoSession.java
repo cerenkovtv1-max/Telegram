@@ -68,7 +68,7 @@ final class DemoSession implements DemoSheetHost {
         new DemoGiftEditorSheet(context, resourcesProvider, account, gift, traits, chosen, picked -> {
             chosen = picked;
             if (!closed && sheet != null) {
-                sheet.demoShowUpgradePage(picked, traits.all);
+                sheet.demoShowUpgradePage(picked, traits.rollPool());
             }
         }).show();
     }
@@ -100,7 +100,7 @@ final class DemoSession implements DemoSheetHost {
     @Override
     public void onRepeat(StarGiftSheet s) {
         s.demoRestoreBaseGift();
-        s.demoShowUpgradePage(chosen, traits.all);
+        s.demoShowUpgradePage(chosen, traits.rollPool());
         // the stock page is shown first, then the upgrade runs by itself (same as pressing the button)
         AndroidUtilities.runOnUIThread(() -> {
             if (!closed) {

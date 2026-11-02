@@ -123,6 +123,10 @@ public class StarGiftPreviewSheet extends BottomSheetWithRecyclerListView {
     private final boolean crafting;
 
     private static double getRarityIndex(TL_stars.StarGiftAttribute attr) {
+        if (attr.rarity == null) {
+            // DEMO catalog entries that carry no rarity data go last (server attributes always have a rarity)
+            return Double.MAX_VALUE;
+        }
         if (attr.rarity instanceof TL_stars.TL_starGiftAttributeRarity) {
             return ((TL_stars.TL_starGiftAttributeRarity) attr.rarity).permille;
         } else if (attr.rarity instanceof TL_stars.TL_starGiftAttributeRarityLegendary) {
@@ -138,7 +142,18 @@ public class StarGiftPreviewSheet extends BottomSheetWithRecyclerListView {
     }
 
     public StarGiftPreviewSheet(Context context, Theme.ResourcesProvider resourcesProvider, int currentAccount, String collectionTitle, ArrayList<TL_stars.StarGiftAttribute> attributes, boolean crafting) {
-        super(context, null, false, false, false, resourcesProvider);
+        this(context, resourcesProvider, currentAccount, collectionTitle, attributes, crafting, null, false);
+    }
+
+    /**
+     * Hook for the local DEMO editor ({@code ui.Stars.demo}). Stock callers use the constructor above, which keeps the
+     * original behaviour: {@code initialSelection == null} starts in the random-traits mode and {@code needFocus == false}.
+     *
+     * @param initialSelection if set, the sheet starts in the "selected traits" mode showing exactly these traits
+     * @param needFocus        lets the sheet host a text field (search) that can open the keyboard
+     */
+    public StarGiftPreviewSheet(Context context, Theme.ResourcesProvider resourcesProvider, int currentAccount, String collectionTitle, ArrayList<TL_stars.StarGiftAttribute> attributes, boolean crafting, @Nullable Attributes initialSelection, boolean needFocus) {
+        super(context, null, needFocus, false, false, resourcesProvider);
         this.currentAccount = currentAccount;
         this.crafting = crafting;
 
@@ -319,7 +334,7 @@ public class StarGiftPreviewSheet extends BottomSheetWithRecyclerListView {
             }
         };
         topView.onSwitchPage(new StarGiftSheet.PageTransition(StarGiftSheet.PAGE_UPGRADE, StarGiftSheet.PAGE_UPGRADE, 1.0f));
-        topView.setPreviewingAttributes(attributes);
+        topView.setPreviewingAttributes(initialSelection != null ? initialSelection.toList() : attributes);
         topView.hideCloseButton();
         headerView.addView(topView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
         headerView.setPadding(backgroundPaddingLeft, 0, backgroundPaddingLeft, 0);
@@ -427,6 +442,10 @@ public class StarGiftPreviewSheet extends BottomSheetWithRecyclerListView {
             TlUtils.findFirstInstance(attributes, TL_stars.starGiftAttributePattern.class),
             TlUtils.findFirstInstance(attributes, TL_stars.starGiftAttributeModel.class)
         );
+        if (initialSelection != null) {
+            selectedAttributes = initialSelection;
+            setMode(Mode.SELECTED);
+        }
 
         adapter.update(false);
         updateHeaderAttributes(false);
@@ -529,9 +548,17 @@ public class StarGiftPreviewSheet extends BottomSheetWithRecyclerListView {
             StarGiftSheet.getRarityName(topView.getUpgradeImageViewAttribute().rarity, rarityColor)
         );
         buttons[1].titleView.setText(topView.getUpgradeBackdropAttribute().name, animated);
-        buttons[1].percentView.setText(AffiliateProgramFragment.percents(topView.getUpgradeBackdropAttribute().getRarityPermille()), animated);
+        buttons[1].percentView.setText(rarityPercentText(topView.getUpgradeBackdropAttribute()), animated);
         buttons[2].titleView.setText(topView.getUpgradePatternAttribute().name, animated);
-        buttons[2].percentView.setText(AffiliateProgramFragment.percents(topView.getUpgradePatternAttribute().getRarityPermille()), animated);
+        buttons[2].percentView.setText(rarityPercentText(topView.getUpgradePatternAttribute()), animated);
+    }
+
+    /** Same text as before for server attributes; empty for DEMO catalog entries that carry no rarity. */
+    private static CharSequence rarityPercentText(TL_stars.StarGiftAttribute attr) {
+        if (attr.rarity == null) {
+            return "";
+        }
+        return AffiliateProgramFragment.percents(attr.getRarityPermille());
     }
 
     private void fillItems(ArrayList<UItem> items, UniversalAdapter adapter) {
@@ -547,8 +574,13 @@ public class StarGiftPreviewSheet extends BottomSheetWithRecyclerListView {
 
         int tab = tabsSelectorView.getSelectedTab();
         if (tab == TAB_MODELS) {
-            items.add(UItem.asCenterShadow(replaceTags(LocaleController.formatPluralStringComma(crafting ? "GiftPreviewCountModelsCrafting" : "GiftPreviewCountModels", models.size()))));
+            int visibleModels = 0;
             for (TL_stars.starGiftAttributeModel model : models) {
+                if (matchesFilter(model.name)) visibleModels++;
+            }
+            items.add(UItem.asCenterShadow(replaceTags(LocaleController.formatPluralStringComma(crafting ? "GiftPreviewCountModelsCrafting" : "GiftPreviewCountModels", visibleModels))));
+            for (TL_stars.starGiftAttributeModel model : models) {
+                if (!matchesFilter(model.name)) continue;
                 items.add(GiftAttributeCell.Factory.asAttribute(tab, new Attributes(
                     rBackdrops.next(), rPatterns.next(), model)));
             }
@@ -560,18 +592,108 @@ public class StarGiftPreviewSheet extends BottomSheetWithRecyclerListView {
                 }
             }
         } else if (tab == TAB_BACKDROPS) {
-            items.add(UItem.asCenterShadow(replaceTags(LocaleController.formatPluralStringComma("GiftPreviewCountBackdrops", backdrops.size()))));
+            int visibleBackdrops = 0;
             for (TL_stars.starGiftAttributeBackdrop backdrop : backdrops) {
+                if (matchesFilter(backdrop.name)) visibleBackdrops++;
+            }
+            items.add(UItem.asCenterShadow(replaceTags(LocaleController.formatPluralStringComma("GiftPreviewCountBackdrops", visibleBackdrops))));
+            for (TL_stars.starGiftAttributeBackdrop backdrop : backdrops) {
+                if (!matchesFilter(backdrop.name)) continue;
                 items.add(GiftAttributeCell.Factory.asAttribute(tab, new Attributes(
                     backdrop, rPatterns.next(), rModels.next())));
             }
         } else if (tab == TAB_PATTERNS) {
-            items.add(UItem.asCenterShadow(replaceTags(LocaleController.formatPluralStringComma("GiftPreviewCountSymbols", patterns.size()))));
+            int visiblePatterns = 0;
             for (TL_stars.starGiftAttributePattern pattern : patterns) {
+                if (matchesFilter(pattern.name)) visiblePatterns++;
+            }
+            items.add(UItem.asCenterShadow(replaceTags(LocaleController.formatPluralStringComma("GiftPreviewCountSymbols", visiblePatterns))));
+            for (TL_stars.starGiftAttributePattern pattern : patterns) {
+                if (!matchesFilter(pattern.name)) continue;
                 items.add(GiftAttributeCell.Factory.asAttribute(tab, new Attributes(
                     rBackdrops.next(), pattern, rModels.next())));
             }
         }
+    }
+
+    // ---- DEMO hooks (ui.Stars.demo). Inert unless a DEMO editor calls them; stock behaviour is unchanged. ----
+
+    /** Lower-cased name filter set by the DEMO editor's search field, null/empty = no filtering. */
+    private String attributeFilter;
+    private int extraBottomPadding;
+
+    private boolean matchesFilter(@Nullable String name) {
+        if (attributeFilter == null || attributeFilter.isEmpty()) {
+            return true;
+        }
+        return name != null && name.toLowerCase().contains(attributeFilter);
+    }
+
+    /** Filters the model / backdrop / symbol grids by name (case-insensitive substring); null or empty clears it. */
+    public void setAttributeFilter(@Nullable String query) {
+        final String normalized = query == null ? null : query.trim().toLowerCase();
+        if (TextUtils.equals(normalized, attributeFilter)) {
+            return;
+        }
+        attributeFilter = normalized;
+        itemAnimator.endAnimations();
+        adapter.update(false);
+    }
+
+    /** Extra room at the bottom of the grid for views the DEMO editor floats above the tabs. */
+    protected void setExtraBottomPadding(int px) {
+        extraBottomPadding = px;
+        recyclerListView.setPadding(dp(16), 0, dp(16), lastBottomInset + dp(56 + 9 + 9) + extraBottomPadding);
+    }
+
+    protected FrameLayout getHeaderView() {
+        return headerView;
+    }
+
+    protected TextView getCollectionTitleView() {
+        return giftNameTextView;
+    }
+
+    public void setCollectionTitle(CharSequence title) {
+        giftNameTextView.setText(title);
+    }
+
+    public void setStatusText(CharSequence text) {
+        giftStatusTextView.setText(text);
+    }
+
+    /**
+     * Freezes whatever is currently shown as the selection (like tapping a card would) and returns it,
+     * or null when the preview has not produced a full set of traits yet.
+     */
+    @Nullable
+    public Attributes commitSelectedAttributes() {
+        if (mode == Mode.RANDOM || selectedAttributes == null) {
+            final Attributes shown = new Attributes(
+                topView.getUpgradeBackdropAttribute(),
+                topView.getUpgradePatternAttribute(),
+                topView.getUpgradeImageViewAttribute()
+            );
+            if (shown.backdrop == null || shown.pattern == null || shown.model == null) {
+                return null;
+            }
+            selectedAttributes = shown;
+            setMode(Mode.SELECTED);
+        }
+        return selectedAttributes;
+    }
+
+    /** Makes exactly these traits the selection and shows them with the stock cross-fade. */
+    public void selectAttributes(Attributes attributes) {
+        selectedAttributes = attributes;
+        setMode(Mode.SELECTED);
+        topView.setPreviewAttributes(attributes);
+        updateSelectedForVisibleViews();
+    }
+
+    /** Shows these traits in the header with the stock cross-fade without changing the selection (used for the roll). */
+    public void previewAttributes(Attributes attributes) {
+        topView.setPreviewAttributes(attributes);
     }
 
     public static class Attributes {
@@ -583,6 +705,15 @@ public class StarGiftPreviewSheet extends BottomSheetWithRecyclerListView {
             this.backdrop = backdrop;
             this.pattern = pattern;
             this.model = model;
+        }
+
+        /** The three traits as a flat attribute list (what {@code TopView.setPreviewingAttributes} takes). */
+        public ArrayList<TL_stars.StarGiftAttribute> toList() {
+            final ArrayList<TL_stars.StarGiftAttribute> list = new ArrayList<>(3);
+            if (backdrop != null) list.add(backdrop);
+            if (pattern != null) list.add(pattern);
+            if (model != null) list.add(model);
+            return list;
         }
     }
 
@@ -878,7 +1009,7 @@ public class StarGiftPreviewSheet extends BottomSheetWithRecyclerListView {
         int inset = getSystemBottomInset();
         if (lastBottomInset != inset) {
             lastBottomInset = inset;
-            recyclerListView.setPadding(dp(16), 0, dp(16), inset + dp(56 + 9 + 9));
+            recyclerListView.setPadding(dp(16), 0, dp(16), inset + dp(56 + 9 + 9) + extraBottomPadding);
             ((ViewGroup.MarginLayoutParams) tabsSelectorView.getLayoutParams()).bottomMargin = lastBottomInset + dp(5);
             tabsSelectorView.requestLayout();
         }

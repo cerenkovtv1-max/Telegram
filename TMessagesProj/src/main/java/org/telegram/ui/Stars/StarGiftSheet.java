@@ -167,6 +167,8 @@ import org.telegram.ui.Components.TextHelper;
 import org.telegram.ui.Components.ViewPagerFixed;
 import org.telegram.ui.Components.spoilers.SpoilersTextView;
 import org.telegram.ui.DialogsActivity;
+import org.telegram.ui.Stars.demo.DemoGiftConfig;
+import org.telegram.ui.Stars.demo.DemoUpgrade;
 import org.telegram.ui.Gifts.GiftMessageBottomSheet;
 import org.telegram.ui.Gifts.GiftMessageView;
 import org.telegram.ui.Gifts.GiftSheet;
@@ -1078,6 +1080,8 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
         final int[] containerLocation = new int[2];
         container.getLocationInWindow(containerLocation);
         ItemOptions.makeOptions(container, resourcesProvider, btn)
+            // Local DEMO gift editor: a separate screen that never calls openUpgrade() or sends any request.
+            .addIf(DemoGiftConfig.ENABLED, R.drawable.menu_gift, DemoUpgrade.menuTitle(), () -> DemoUpgrade.start(getContext(), currentAccount, resourcesProvider))
             .addIf(getUniqueGift() != null && isMineWithActions(currentAccount, DialogObject.getPeerDialogId(getUniqueGift().owner_id)) && giftsList instanceof StarsController.GiftsList && savedStarGift != null && getInputStarGift() != null, (savedStarGift != null && savedStarGift.pinned_to_top) ? R.drawable.msg_unpin : R.drawable.msg_pin, getString((savedStarGift != null && savedStarGift.pinned_to_top) ? R.string.Gift2Unpin : R.string.Gift2Pin), () -> {
                 if (savedStarGift.unsaved) {
                     savedStarGift.unsaved = false;
@@ -2085,7 +2089,8 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
         private Boolean optionsViewLight;
 
         public void setShowOptions(boolean show) {
-            showOptions = show;
+            // the "..." menu also carries the local DEMO Upgrade entry, so it is shown even where the stock menu would be empty
+            showOptions = show || DemoGiftConfig.ENABLED;
             onSwitchPage(currentPage);
         }
 

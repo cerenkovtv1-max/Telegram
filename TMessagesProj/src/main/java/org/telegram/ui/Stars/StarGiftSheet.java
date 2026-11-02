@@ -2160,23 +2160,62 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             demoVariantsChip.setVisibility(View.VISIBLE);
         }
 
-        private TextView demoBadge;
+        /** How much of the card diagonal the watermark word covers. */
+        private static final float DEMO_WATERMARK_SPAN = 0.62f;
+        /** Opacity of the watermark (0..255). */
+        private static final int DEMO_WATERMARK_ALPHA = 70;
 
-        /** The "DEMO" tag of the local DEMO screens (top centre, clear of the close and "..." buttons). */
-        public void setDemoBadge(boolean show) {
-            if (show && demoBadge == null) {
-                demoBadge = new TextView(getContext());
-                demoBadge.setText(DemoText.demoBadge());
-                demoBadge.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
-                demoBadge.setTypeface(AndroidUtilities.bold());
-                demoBadge.setTextColor(0xFFFFFFFF);
-                demoBadge.setPadding(dp(8), dp(3), dp(8), dp(3));
-                demoBadge.setBackground(Theme.createRoundRectDrawable(dp(10), 0x99000000));
-                addView(demoBadge, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL, 0, 12, 0, 0));
+        private boolean demoWatermarkOn;
+        private Paint demoWatermarkPaint;
+        private Paint demoWatermarkShadowPaint;
+
+        /** Marks the local DEMO card with a diagonal watermark over the whole card (nothing is added to the layout). */
+        public void setDemoWatermark(boolean on) {
+            if (demoWatermarkOn != on) {
+                demoWatermarkOn = on;
+                invalidate();
             }
-            if (demoBadge != null) {
-                demoBadge.setVisibility(show ? View.VISIBLE : View.GONE);
+        }
+
+        private void drawDemoWatermark(Canvas canvas, float width, float height) {
+            if (!demoWatermarkOn || width <= 0 || height <= 0) {
+                return;
             }
+            final String text = DemoText.watermark();
+            if (text == null || text.isEmpty()) {
+                return;
+            }
+            if (demoWatermarkPaint == null) {
+                demoWatermarkPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                demoWatermarkPaint.setTypeface(AndroidUtilities.bold());
+                demoWatermarkPaint.setTextAlign(Paint.Align.CENTER);
+                demoWatermarkPaint.setColor(0xFFFFFFFF);
+                demoWatermarkPaint.setAlpha(DEMO_WATERMARK_ALPHA);
+                demoWatermarkShadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                demoWatermarkShadowPaint.setTypeface(AndroidUtilities.bold());
+                demoWatermarkShadowPaint.setTextAlign(Paint.Align.CENTER);
+                demoWatermarkShadowPaint.setColor(0xFF000000);
+                demoWatermarkShadowPaint.setAlpha(DEMO_WATERMARK_ALPHA / 2);
+            }
+            // size the word so that it spans a fixed share of the card diagonal, whatever the card size is
+            final float diagonal = (float) Math.hypot(width, height);
+            demoWatermarkPaint.setTextSize(100f);
+            final float measured = demoWatermarkPaint.measureText(text);
+            if (measured <= 0) {
+                return;
+            }
+            final float textSize = 100f * DEMO_WATERMARK_SPAN * diagonal / measured;
+            demoWatermarkPaint.setTextSize(textSize);
+            demoWatermarkShadowPaint.setTextSize(textSize);
+            final Paint.FontMetrics metrics = demoWatermarkPaint.getFontMetrics();
+            final float baseline = -(metrics.ascent + metrics.descent) / 2f;
+            final float angle = -(float) Math.toDegrees(Math.atan2(height, width));
+
+            canvas.save();
+            canvas.rotate(angle, width / 2f, height / 2f);
+            canvas.drawText(text, width / 2f + dp(1), height / 2f + baseline + dp(1), demoWatermarkShadowPaint);
+            canvas.drawText(text, width / 2f, height / 2f + baseline, demoWatermarkPaint);
+            canvas.restore();
         }
 
         public void setShowOptions(boolean show) {
@@ -3217,6 +3256,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             }
 
             super.dispatchDraw(canvas);
+            drawDemoWatermark(canvas, getWidth(), height);
             canvas.restore();
         }
 
@@ -4937,7 +4977,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
                 if (demoHost != null) {
                     // never claim a real upgrade happened
                     getBulletinFactory()
-                        .createSimpleBulletin(R.raw.gift_upgrade, DemoText.upgradedBulletinTitle(), DemoText.upgradedBulletinText())
+                        .createSimpleBulletin(DemoText.upgradedBulletinTitle(), DemoText.upgradedBulletinText())
                         .setDuration(Bulletin.DURATION_PROLONG)
                         .ignoreDetach()
                         .show();
@@ -6831,7 +6871,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     public StarGiftSheet setDemoHost(DemoSheetHost host, TL_stars.StarGift baseGift) {
         this.demoHost = host;
         this.demoBaseGift = baseGift;
-        topView.setDemoBadge(host != null);
+        topView.setDemoWatermark(host != null);
         return this;
     }
 

@@ -21,7 +21,10 @@ public final class DemoGiftStore {
     private static final int MAX_RECORDS = 200;
 
     public static final class Record {
+        /** Internal counter of DEMO results. */
         public int serial;
+        /** The random number shown on the card after the name. */
+        public int number;
         public long createdAt;
         public long giftId;
         public String giftTitle;
@@ -50,7 +53,7 @@ public final class DemoGiftStore {
         return ApplicationLoader.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
 
-    /** The number shown after the gift name ("Plush Pepe #3"): a local counter, not a real gift number. */
+    /** Internal counter of DEMO results (makes each result's id unique); not shown on the card. */
     public synchronized int nextSerial() {
         final SharedPreferences preferences = prefs();
         final int next = preferences.getInt(KEY_COUNTER, 0) + 1;
@@ -65,6 +68,7 @@ public final class DemoGiftStore {
         try {
             final JSONObject o = new JSONObject();
             o.put("serial", record.serial);
+            o.put("number", record.number);
             o.put("createdAt", record.createdAt);
             o.put("giftId", record.giftId);
             o.put("giftTitle", record.giftTitle);

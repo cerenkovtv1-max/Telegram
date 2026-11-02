@@ -87,8 +87,9 @@ final class DemoSession implements DemoSheetHost {
         }
         final DemoGiftStore store = DemoGiftStore.get();
         final int serial = store.nextSerial();
-        store.add(DemoUniqueGifts.toRecord(gift, chosen, serial));
-        return DemoUniqueGifts.build(gift, chosen, serial, UserConfig.getInstance(account).getClientUserId());
+        final TL_stars.TL_starGiftUnique unique = DemoUniqueGifts.build(gift, chosen, serial, UserConfig.getInstance(account).getClientUserId());
+        store.add(DemoUniqueGifts.toRecord(gift, chosen, unique));
+        return unique;
     }
 
     @Override

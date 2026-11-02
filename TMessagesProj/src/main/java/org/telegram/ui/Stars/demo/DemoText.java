@@ -111,10 +111,6 @@ public final class DemoText {
 
     // ---- result page ----
 
-    public static String repeatButton() {
-        return t("Повторить (DEMO)", "Repeat (DEMO)");
-    }
-
     public static String edit() {
         return t("Изменить", "Edit");
     }
@@ -125,13 +121,6 @@ public final class DemoText {
 
     public static String pickAnotherGift() {
         return t("Выбрать другой подарок", "Choose another gift");
-    }
-
-    public static String resultNotice() {
-        return t(
-            "DEMO • локальный результат. Это не настоящий NFT: Stars не списаны, подарки и аккаунт не изменены.",
-            "DEMO • local result. This is not a real NFT: no Stars were spent, gifts and account are untouched."
-        );
     }
 
     public static String blocked() {

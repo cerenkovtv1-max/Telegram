@@ -3388,7 +3388,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
         actionView.setAlpha(currentPage.at(PAGE_INFO) * actionAlpha);
         container.updateTranslations();
         container.invalidate();
-        buttonContainer.setVisibility(currentPage.is(PAGE_CRAFTING) ? View.GONE : View.VISIBLE);
+        buttonContainer.setVisibility(currentPage.is(PAGE_CRAFTING) || demoButtonHidden ? View.GONE : View.VISIBLE);
         updateUnderButtonContainer();
     }
 
@@ -4894,6 +4894,9 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
                 topView.imageLayout.setAlpha(0.0f);
                 topView.imagesRollView.setAlpha(1.0f);
 
+                if (demoHost != null) {
+                    demoShowBottomButton(); // the roll needs its Skip button; it is hidden again when the roll ends
+                }
                 button.setText(getString(R.string.GiftSkipAnimation), true);
                 button.setFilled(true);
                 button.setOnClickListener(v -> {
@@ -5232,9 +5235,8 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             }), true, dp(8f / 3f), dp(.66f)));
             afterTableTextView.setVisibility(View.VISIBLE);
         } else if (demoHost != null) {
-            // DEMO: instead of the real "show / hide in profile" link, the DEMO notice (and, on the result, its actions)
-            afterTableTextView.setText(demoFooter());
-            afterTableTextView.setVisibility(View.VISIBLE);
+            // DEMO: nothing under the table (no real "show / hide in profile" link either)
+            afterTableTextView.setVisibility(View.GONE);
         } else if (myProfile && isMine(currentAccount, dialogId)) {
             if (dialogId >= 0) {
                 final SpannableStringBuilder sb = new SpannableStringBuilder();
@@ -6789,6 +6791,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
         if (demoHost == null || savedStarGift == null || switchingPagesAnimator != null) {
             return;
         }
+        demoShowBottomButton();
         sample_attributes = pool;
         if (roller != null) {
             roller.detach();
@@ -6856,6 +6859,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             roller.detach();
             roller = null;
         }
+        demoShowBottomButton();
         topView.imageLayout.setAlpha(1.0f);
         topView.imagesRollView.setAlpha(0.0f);
         rolling = false;
@@ -6865,26 +6869,17 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
         set(savedStarGift, giftsList);
     }
 
-    /** The DEMO main button on the result page. */
+    /** On the DEMO result page there is no bottom button (Edit / Repeat / Choose another gift live in the "..." menu). */
+    private boolean demoButtonHidden;
+
     private void demoApplyResultButton() {
-        button.setFilled(true);
-        button.setText(DemoText.repeatButton(), true);
-        button.setSubText(null, true);
-        button.setOnClickListener(v -> demoHost.onRepeat(this));
+        demoButtonHidden = true;
+        buttonContainer.setVisibility(View.GONE);
     }
 
-    /** The grey text under the table: the DEMO notice, and on the result page the three DEMO actions as links. */
-    private CharSequence demoFooter() {
-        final SpannableStringBuilder sb = new SpannableStringBuilder(DemoText.resultNotice());
-        if (savedStarGift != null && savedStarGift.gift instanceof TL_stars.TL_starGiftUnique) {
-            sb.append("\n");
-            sb.append(AndroidUtilities.replaceSingleTag("**" + DemoText.edit() + "**", () -> demoHost.onEdit(this)));
-            sb.append("  •  ");
-            sb.append(AndroidUtilities.replaceSingleTag("**" + DemoText.repeat() + "**", () -> demoHost.onRepeat(this)));
-            sb.append("  •  ");
-            sb.append(AndroidUtilities.replaceSingleTag("**" + DemoText.pickAnotherGift() + "**", () -> demoHost.onPickAnotherGift(this)));
-        }
-        return sb;
+    private void demoShowBottomButton() {
+        demoButtonHidden = false;
+        buttonContainer.setVisibility(currentPage.is(PAGE_CRAFTING) ? View.GONE : View.VISIBLE);
     }
 
     /** The "..." menu in DEMO: only the DEMO actions. */

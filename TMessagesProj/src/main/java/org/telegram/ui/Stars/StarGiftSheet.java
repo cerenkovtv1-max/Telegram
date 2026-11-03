@@ -2900,7 +2900,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             invalidate();
         }
 
-        /** DEMO hook: stops the 2.5s auto-rotation so a deliberately picked set of traits stays exactly as shown. */
+        /** DEMO hook (picker): stops the 2.5s auto-rotation so a deliberately picked set of traits stays exactly as shown. */
         public void stopPreviewRotation() {
             AndroidUtilities.cancelRunOnUIThread(checkToRotateRunnable);
         }
@@ -6899,8 +6899,9 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     }
 
     /**
-     * The stock "Upgrade Gift" page, showing exactly the traits picked in the DEMO picker. Its button runs the local
-     * roll; the roll pool is the picked gift's own attributes.
+     * The stock "Upgrade Gift" page: the card cycles through random variants of the picked gift, as in the original.
+     * Its button runs the local roll, which lands on the combination picked in the DEMO picker (chosen); the roll pool
+     * (and the cycling) use the picked gift's own attributes.
      */
     public void demoShowUpgradePage(StarGiftPreviewSheet.Attributes chosen, ArrayList<TL_stars.StarGiftAttribute> pool) {
         if (demoHost == null || savedStarGift == null || switchingPagesAnimator != null) {
@@ -6913,8 +6914,9 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
         }
         roller = new Roller(topView);
         roller.preload(pool);
-        topView.setPreviewingAttributes(chosen.toList());
-        topView.stopPreviewRotation();
+        // like the original: before the upgrade the card slowly cycles through random variants of this gift (every 2.5 s);
+        // the picked combination stays hidden until the roll lands on it
+        topView.setPreviewingAttributes(pool);
         topView.setText(1, getString(R.string.Gift2UpgradeTitle), null, null, null);
         topView.setDemoVariants(DemoText.viewAllVariants(), demoThumbs(), this::demoOpenVariants);
 

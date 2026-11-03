@@ -139,7 +139,7 @@ public final class DemoText {
 
     /** Text-only bulletin after the DEMO upgrade (no icon). It must say plainly that nothing real happened. */
     public static String upgradedBulletinTitle() {
-        return t("DEMO: улучшение показано", "DEMO: upgrade shown");
+        return t("", "");
     }
 
     public static String upgradedBulletinText() {

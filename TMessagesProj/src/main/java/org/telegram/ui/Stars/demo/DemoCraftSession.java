@@ -32,7 +32,14 @@ final class DemoCraftSession implements DemoSheetHost, DemoCraftHost {
 
     /** What a successful craft gives. */
     private StarGiftPreviewSheet.Attributes result;
-    private boolean success = true;
+    private static final int OUTCOME_SUCCESS = 0;
+    private static final int OUTCOME_FAILURE = 1;
+    /** Random, using the success chance the craft screen shows (the sum of the gifts' chances). */
+    private static final int OUTCOME_BY_CHANCE = 2;
+    private int outcome = OUTCOME_SUCCESS;
+
+    /** How many local gifts the "+" sheet offers at a time. */
+    private static final int OFFERED_GIFTS = 12;
     /** The gifts of the last craft, put back into the slots by "Repeat". */
     private final ArrayList<TL_stars.StarGift> lastSlots = new ArrayList<>();
 
@@ -64,8 +71,8 @@ final class DemoCraftSession implements DemoSheetHost, DemoCraftHost {
     private void askOutcome() {
         new AlertDialog.Builder(context, resourcesProvider)
             .setTitle(DemoText.craftOutcomeTitle())
-            .setItems(new CharSequence[]{DemoText.craftOutcomeSuccess(), DemoText.craftOutcomeFail()}, (dialog, which) -> {
-                success = which == 0;
+            .setItems(new CharSequence[]{DemoText.craftOutcomeSuccess(), DemoText.craftOutcomeFail(), DemoText.craftOutcomeByChance()}, (dialog, which) -> {
+                outcome = which == 1 ? OUTCOME_FAILURE : which == 2 ? OUTCOME_BY_CHANCE : OUTCOME_SUCCESS;
                 open();
             })
             .show();
@@ -90,23 +97,28 @@ final class DemoCraftSession implements DemoSheetHost, DemoCraftHost {
 
     @Override
     public void onAddCraftGift(Utilities.Callback<TL_stars.StarGift> onGift, int taken) {
-        new AlertDialog.Builder(context, resourcesProvider)
-            .setTitle(DemoText.craftAddTitle())
-            .setItems(new CharSequence[]{DemoText.craftAddRandom(), DemoText.craftAddPick()}, (dialog, which) -> {
-                if (which == 0) {
-                    addGift(onGift, randomTraits());
-                } else {
-                    new DemoGiftEditorSheet(context, resourcesProvider, account, gift, traits, randomTraits(), DemoText.purposeCraftInput(), picked -> addGift(onGift, picked)).show();
-                }
-            })
-            .show();
+        new DemoCraftGiftSheet(context, resourcesProvider, account, taken, this::rollOffer, picked -> {
+            if (!closed) {
+                onGift.run(picked);
+            }
+        }, () -> new DemoGiftEditorSheet(context, resourcesProvider, account, gift, traits, randomTraits(), DemoText.purposeCraftInput(), attributes -> {
+            if (!closed && attributes != null) {
+                onGift.run(newSlotGift(attributes));
+            }
+        }).show()).show();
     }
 
-    private void addGift(Utilities.Callback<TL_stars.StarGift> onGift, StarGiftPreviewSheet.Attributes picked) {
-        if (closed || picked == null) {
-            return;
+    /** A fresh set of local gifts of the collection (random model, backdrop and symbol each) for the "+" sheet. */
+    private ArrayList<TL_stars.StarGift> rollOffer() {
+        final ArrayList<TL_stars.StarGift> offer = new ArrayList<>();
+        for (int i = 0; i < OFFERED_GIFTS; ++i) {
+            offer.add(newSlotGift(randomTraits()));
         }
-        onGift.run(DemoUniqueGifts.buildSlot(gift, picked, DemoGiftStore.get().nextSerial(), selfId()));
+        return offer;
+    }
+
+    private TL_stars.StarGift newSlotGift(StarGiftPreviewSheet.Attributes attributes) {
+        return DemoUniqueGifts.buildSlot(gift, attributes, DemoGiftStore.get().nextSerial(), selfId());
     }
 
     /** A random model, backdrop and symbol, all of this collection. */
@@ -123,8 +135,22 @@ final class DemoCraftSession implements DemoSheetHost, DemoCraftHost {
     public TL_stars.TL_starGiftUnique onCraft(ArrayList<TL_stars.StarGift> gifts) {
         lastSlots.clear();
         lastSlots.addAll(gifts);
-        if (!success || result == null || result.model == null || result.pattern == null || result.backdrop == null) {
-            return null; // the chosen outcome: a failed craft
+        if (result == null || result.model == null || result.pattern == null || result.backdrop == null) {
+            return null;
+        }
+        final boolean success;
+        if (outcome == OUTCOME_BY_CHANCE) {
+            // the same number the craft screen shows: the sum of the gifts' chances, in permille
+            int chance = 0;
+            for (TL_stars.StarGift slot : gifts) {
+                chance += slot.craft_chance_permille;
+            }
+            success = ThreadLocalRandom.current().nextInt(1000) < chance;
+        } else {
+            success = outcome == OUTCOME_SUCCESS;
+        }
+        if (!success) {
+            return null; // a failed craft: the stock "Crafting Failed" screen
         }
         final DemoGiftStore store = DemoGiftStore.get();
         final TL_stars.TL_starGiftUnique unique = DemoUniqueGifts.buildCrafted(gift, result, store.nextSerial(), selfId());

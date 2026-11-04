@@ -51,13 +51,32 @@ final class DemoUniqueGifts {
         return unique;
     }
 
-    /** Every gift the user puts into a craft adds this much to the success chance shown on the craft screen (25%). */
-    private static final int SLOT_CHANCE_PERMILLE = 250;
+    /** Per-gift craft chance range, permille: four gifts add up to 100% at most, as the stock screen expects. */
+    private static final int CHANCE_MIN_PERMILLE = 80;
+    private static final int CHANCE_MAX_PERMILLE = 250;
+
+    /**
+     * What one gift adds to the success chance of a craft (the "+N%" chip on the gift and the sum on the craft screen).
+     * In the original the server sends this number per gift and the client only adds them up; the server's formula is not
+     * in the app, so this is an approximation: the rarer the gift's model, symbol and backdrop, the more it adds
+     * ({@code 8%} for the most common up to {@code 25%} for the rarest).
+     */
+    static int craftChancePermille(StarGiftPreviewSheet.Attributes traits) {
+        double score = 0;
+        final TL_stars.StarGiftAttribute[] parts = {traits.model, traits.pattern, traits.backdrop};
+        for (TL_stars.StarGiftAttribute part : parts) {
+            if (part != null) {
+                score += 10.0 / Math.max(1, Math.min(100, part.getRarityPermille()));
+            }
+        }
+        final double share = 1.0 - Math.exp(-score / 6.0);
+        return (int) Math.round(CHANCE_MIN_PERMILLE + (CHANCE_MAX_PERMILLE - CHANCE_MIN_PERMILLE) * share);
+    }
 
     /** A collectible to put into a DEMO craft: same as {@link #build}, plus the per-gift craft chance the craft screen shows. */
     static TL_stars.TL_starGiftUnique buildSlot(TL_stars.StarGift base, StarGiftPreviewSheet.Attributes traits, int serial, long userId) {
         final TL_stars.TL_starGiftUnique unique = build(base, traits, serial, userId);
-        unique.craft_chance_permille = SLOT_CHANCE_PERMILLE;
+        unique.craft_chance_permille = craftChancePermille(traits);
         return unique;
     }
 

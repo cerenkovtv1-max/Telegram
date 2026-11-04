@@ -130,6 +130,14 @@ public final class DemoText {
         return t("Провал: подарки сгорят", "Failure: the gifts are lost");
     }
 
+    static String craftOutcomeByChance() {
+        return t("По шансу: как в оригинале, случайно", "By chance: random, like the original");
+    }
+
+    static String craftSelectRefresh() {
+        return t("Обновить список", "Refresh the list");
+    }
+
     static String craftAddTitle() {
         return t("DEMO: подарок для крафта", "DEMO: gift for the craft");
     }
@@ -180,7 +188,7 @@ public final class DemoText {
 
     /** The diagonal watermark across the DEMO card (one word, drawn big; keep it short). */
     public static String watermark() {
-        return "";
+        return "PARODY";
     }
 
     public static String blocked() {

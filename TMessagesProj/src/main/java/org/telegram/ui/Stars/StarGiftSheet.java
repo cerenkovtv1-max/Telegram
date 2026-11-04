@@ -7068,7 +7068,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     private boolean demoCraftMode;
 
     /** How long the stock "Crafting" screen runs before the DEMO answers (the original waits for the server). */
-    private static final long DEMO_CRAFT_PAUSE_MS = 1400;
+    private static final long DEMO_CRAFT_PAUSE_MS = 700;
 
     /**
      * DEMO craft: opens the stock craft page (four slots, success chance, cube animation, "Crafting Failed" screen) with the

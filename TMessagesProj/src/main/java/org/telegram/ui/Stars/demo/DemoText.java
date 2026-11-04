@@ -89,11 +89,57 @@ public final class DemoText {
         return t("Готово", "Done");
     }
 
+    /** Same status line for a wizard that serves another purpose (e.g. the result of a craft). */
+    static String statusStep(String purpose, int step, String giftTitle, boolean partial) {
+        return t(
+            "DEMO • " + purpose + " • шаг " + (step + 1) + " из 3 • варианты «" + giftTitle + "»" + (partial ? " • неполный список" : ""),
+            "DEMO • " + purpose + " • step " + (step + 1) + " of 3 • “" + giftTitle + "” variants" + (partial ? " • partial list" : "")
+        );
+    }
+
     static String statusStep(int step, String giftTitle, boolean partial) {
         return t(
             "DEMO • шаг " + (step + 1) + " из 3 • только варианты «" + giftTitle + "»" + (partial ? " • неполный список" : ""),
             "DEMO • step " + (step + 1) + " of 3 • only “" + giftTitle + "” variants" + (partial ? " • partial list" : "")
         );
+    }
+
+    // ---- DEMO craft ----
+
+    public static String menuCraft() {
+        return "DEMO Craft";
+    }
+
+    static String purposeCraftResult() {
+        return t("результат крафта", "craft result");
+    }
+
+    static String purposeCraftInput() {
+        return t("подарок для крафта", "gift for the craft");
+    }
+
+    static String craftOutcomeTitle() {
+        return t("DEMO: исход крафта", "DEMO: craft outcome");
+    }
+
+    static String craftOutcomeSuccess() {
+        return t("Успех: получить выбранный подарок", "Success: get the chosen gift");
+    }
+
+    static String craftOutcomeFail() {
+        return t("Провал: подарки сгорят", "Failure: the gifts are lost");
+    }
+
+    static String craftAddTitle() {
+        return t("DEMO: подарок для крафта", "DEMO: gift for the craft");
+    }
+
+    static String craftAddRandom() {
+        return t("Случайный подарок", "Random gift");
+    }
+
+    static String craftAddPick() {
+        return t("Выбрать вариант…", "Choose a variant…");
     }
 
     // ---- confirm page (stock "Upgrade Gift" page) ----

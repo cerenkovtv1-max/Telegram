@@ -34,6 +34,8 @@ public final class DemoGiftEditorSheet extends StarGiftPreviewSheet {
 
     private final String giftTitle;
     private final boolean partial;
+    /** What the picked traits are for ("craft result", ...); null for the plain upgrade picker. */
+    private final String purpose;
     private final OnDone onDone;
 
     private final FrameLayout bar;
@@ -49,9 +51,23 @@ public final class DemoGiftEditorSheet extends StarGiftPreviewSheet {
         StarGiftPreviewSheet.Attributes initial,
         OnDone onDone
     ) {
+        this(context, resourcesProvider, account, gift, traits, initial, null, onDone);
+    }
+
+    public DemoGiftEditorSheet(
+        Context context,
+        Theme.ResourcesProvider resourcesProvider,
+        int account,
+        TL_stars.StarGift gift,
+        DemoGiftCatalog.GiftTraits traits,
+        StarGiftPreviewSheet.Attributes initial,
+        String purpose,
+        OnDone onDone
+    ) {
         super(context, resourcesProvider, account, DemoText.giftLabel(gift), traits.all, false, initial, true);
         this.giftTitle = DemoText.giftLabel(gift);
         this.partial = traits.partial;
+        this.purpose = purpose;
         this.onDone = onDone;
 
         // Search over the current step's grid (names only; nothing is sent anywhere).
@@ -100,7 +116,7 @@ public final class DemoGiftEditorSheet extends StarGiftPreviewSheet {
             text = DemoText.done();
         }
         nextButton.setText(text, animated);
-        setStatusText(DemoText.statusStep(step, giftTitle, partial));
+        setStatusText(purpose == null ? DemoText.statusStep(step, giftTitle, partial) : DemoText.statusStep(purpose, step, giftTitle, partial));
     }
 
     private void onNext() {

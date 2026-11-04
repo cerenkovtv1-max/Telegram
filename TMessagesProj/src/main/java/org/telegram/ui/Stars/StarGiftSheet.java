@@ -167,6 +167,8 @@ import org.telegram.ui.Components.TextHelper;
 import org.telegram.ui.Components.ViewPagerFixed;
 import org.telegram.ui.Components.spoilers.SpoilersTextView;
 import org.telegram.ui.DialogsActivity;
+import org.telegram.ui.Stars.demo.DemoCraft;
+import org.telegram.ui.Stars.demo.DemoCraftHost;
 import org.telegram.ui.Stars.demo.DemoGiftConfig;
 import org.telegram.ui.Stars.demo.DemoSheetHost;
 import org.telegram.ui.Stars.demo.DemoText;
@@ -1093,6 +1095,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
         ItemOptions.makeOptions(container, resourcesProvider, btn)
             // Local DEMO gift editor: a separate screen that never calls openUpgrade() or sends any request.
             .addIf(DemoGiftConfig.ENABLED, R.drawable.menu_gift, DemoUpgrade.menuTitle(), this::openDemoUpgrade)
+            .addIf(DemoGiftConfig.ENABLED, R.drawable.outline_craft, DemoCraft.menuTitle(), this::openDemoCraft)
             .addIf(getUniqueGift() != null && isMineWithActions(currentAccount, DialogObject.getPeerDialogId(getUniqueGift().owner_id)) && giftsList instanceof StarsController.GiftsList && savedStarGift != null && getInputStarGift() != null, (savedStarGift != null && savedStarGift.pinned_to_top) ? R.drawable.msg_unpin : R.drawable.msg_pin, getString((savedStarGift != null && savedStarGift.pinned_to_top) ? R.string.Gift2Unpin : R.string.Gift2Pin), () -> {
                 if (savedStarGift.unsaved) {
                     savedStarGift.unsaved = false;
@@ -6875,6 +6878,15 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     }
 
     /** "DEMO Upgrade" from the menu: this gift screen closes first, so the DEMO does not stack on top of it. */
+    private void openDemoCraft() {
+        final Context context = getContext();
+        final int account = currentAccount;
+        final Theme.ResourcesProvider provider = resourcesProvider;
+        dismiss();
+        // let the close animation play before the DEMO appears
+        AndroidUtilities.runOnUIThread(() -> DemoCraft.start(context, account, provider), 250);
+    }
+
     private void openDemoUpgrade() {
         final Context context = getContext();
         final int account = currentAccount;
@@ -7050,6 +7062,61 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     /** Presses the DEMO "Upgrade" button of the upgrade page (used by Repeat). */
     public void demoRunUpgrade() {
         demoConfirmUpgrade();
+    }
+
+    /** True once the DEMO craft page was opened: "Back" on it closes the sheet. */
+    private boolean demoCraftMode;
+
+    /** How long the stock "Crafting" screen runs before the DEMO answers (the original waits for the server). */
+    private static final long DEMO_CRAFT_PAUSE_MS = 1400;
+
+    /**
+     * DEMO craft: opens the stock craft page (four slots, success chance, cube animation, "Crafting Failed" screen) with the
+     * server steps answered by the host: the "+" slot asks the host for a gift, "Craft Gift" asks it for the outcome. Nothing
+     * is sent (the stock {@code craftStarGift} request and the list of the user's own gifts are never used).
+     */
+    public void demoOpenCrafting(DemoCraftHost craftHost, TL_stars.StarGift base, ArrayList<TL_stars.StarGift> initialGifts) {
+        if (demoHost == null || craftHost == null || base == null) {
+            return;
+        }
+        demoCraftMode = true;
+        final CraftTopView craft = topView.craftTopView;
+        craft.setup(currentAccount, base.id, base.getDocument(), DemoText.giftLabel(base));
+        craft.setOnCraft((gifts, whenDone, onError) -> AndroidUtilities.runOnUIThread(() -> {
+            if (demoHost == null) {
+                return; // closed while "crafting"
+            }
+            final TL_stars.TL_starGiftUnique crafted = craftHost.onCraft(gifts);
+            if (crafted == null) {
+                whenDone.run(null, null);
+            } else {
+                whenDone.run(crafted, () -> demoShowCraftResult(crafted));
+            }
+        }, DEMO_CRAFT_PAUSE_MS));
+        craft.setOnAddGift((onGift, first) -> craftHost.onAddCraftGift(onGift, craft.getGiftsSelectedCount()));
+        craft.setOnClose(this::dismiss);
+        if (initialGifts != null) {
+            for (TL_stars.StarGift initial : initialGifts) {
+                craft.selectGift(initial);
+            }
+        }
+        switchPage(PAGE_CRAFTING, false);
+    }
+
+    /** The same in-place switch the real flow makes when the crafted gift arrives, without any request. */
+    private void demoShowCraftResult(TL_stars.TL_starGiftUnique crafted) {
+        if (demoHost == null || savedStarGift == null) {
+            return;
+        }
+        savedStarGift.gift = crafted;
+        savedStarGift.can_upgrade = false;
+        savedStarGift.upgrade_stars = 0;
+        savedStarGift.name_hidden = true; // no "from <name>" line, as on the upgrade result
+        set(savedStarGift, giftsList);
+        switchPage(PAGE_INFO, true);
+        if (fireworksOverlay != null) {
+            fireworksOverlay.start(true);
+        }
     }
 
     /** Back to the base-gift page as it was before the upgrade (used by Edit and Repeat). */
@@ -8521,6 +8588,10 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             }
             if (topView.craftTopView.crafted) {
                 super.onBackPressed();
+                return;
+            }
+            if (demoHost != null && demoCraftMode) {
+                dismiss(); // the DEMO craft has no base-gift page to go back to
                 return;
             }
         }

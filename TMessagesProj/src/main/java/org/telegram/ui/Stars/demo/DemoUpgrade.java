@@ -26,13 +26,26 @@ public final class DemoUpgrade {
         return DemoText.menuItem();
     }
 
+    /** What a flow gets once the user has picked a gift and that gift's own traits are loaded. */
+    public interface OnGiftReady {
+        void onReady(TL_stars.StarGift gift, DemoGiftCatalog.GiftTraits traits);
+    }
+
     public static void start(Context context, int account, Theme.ResourcesProvider resourcesProvider) {
+        pick(context, account, resourcesProvider, (gift, traits) -> new DemoSession(context, account, resourcesProvider, gift, traits).open());
+    }
+
+    /**
+     * Load the gift list (read-only), let the user pick a gift in {@link DemoGiftPickerSheet}, load that gift's own
+     * traits (read-only), close the picker and hand both to {@code onReady}. Shared by the DEMO upgrade and the DEMO craft.
+     */
+    public static void pick(Context context, int account, Theme.ResourcesProvider resourcesProvider, OnGiftReady onReady) {
         if (!DemoGiftConfig.ENABLED || context == null || loading) {
             return;
         }
         final DemoGiftCatalog catalog = DemoGiftCatalog.forAccount(account);
         if (catalog.isReady()) {
-            openPicker(context, resourcesProvider, account, catalog);
+            openPicker(context, resourcesProvider, account, catalog, onReady);
             return;
         }
 
@@ -47,22 +60,22 @@ public final class DemoUpgrade {
         catalog.load(ready -> {
             loading = false;
             progress.dismiss();
-            openPicker(context, resourcesProvider, account, ready);
+            openPicker(context, resourcesProvider, account, ready, onReady);
         });
     }
 
-    private static void openPicker(Context context, Theme.ResourcesProvider resourcesProvider, int account, DemoGiftCatalog catalog) {
+    private static void openPicker(Context context, Theme.ResourcesProvider resourcesProvider, int account, DemoGiftCatalog catalog, OnGiftReady onReady) {
         if (catalog.gifts.isEmpty()) {
             Toast.makeText(context, DemoText.giftsLoadFailed(), Toast.LENGTH_LONG).show();
             return;
         }
         final DemoGiftPickerSheet[] picker = new DemoGiftPickerSheet[1];
-        picker[0] = new DemoGiftPickerSheet(context, resourcesProvider, account, catalog, gift -> openGift(context, resourcesProvider, account, catalog, gift, () -> picker[0].dismiss()));
+        picker[0] = new DemoGiftPickerSheet(context, resourcesProvider, account, catalog, gift -> openGift(context, resourcesProvider, account, catalog, gift, () -> picker[0].dismiss(), onReady));
         picker[0].show();
     }
 
-    /** Loads the picked gift's own traits and opens the real gift screen in DEMO mode for it. */
-    private static void openGift(Context context, Theme.ResourcesProvider resourcesProvider, int account, DemoGiftCatalog catalog, TL_stars.StarGift gift, Runnable whenOpened) {
+    /** Loads the picked gift's own traits, then hands the gift and its traits on. */
+    private static void openGift(Context context, Theme.ResourcesProvider resourcesProvider, int account, DemoGiftCatalog catalog, TL_stars.StarGift gift, Runnable whenOpened, OnGiftReady onReady) {
         if (loading) {
             return;
         }
@@ -78,7 +91,7 @@ public final class DemoUpgrade {
                 return;
             }
             whenOpened.run();
-            new DemoSession(context, account, resourcesProvider, gift, traits).open();
+            onReady.onReady(gift, traits);
         });
     }
 }

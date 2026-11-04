@@ -45,11 +45,9 @@ final class DemoSession implements DemoSheetHost {
         this.chosen = traits.defaults();
     }
 
-    /** Opens the real gift screen on a local "saved gift" of the picked base gift. */
-    void open() {
+    /** A local copy of an upgradable gift the user owns: exactly the data the original "Saved Gift" page reads. */
+    static TL_stars.TL_savedStarGift savedBaseGift(int account, TL_stars.StarGift gift) {
         final long selfId = UserConfig.getInstance(account).getClientUserId();
-
-        // A local copy of an upgradable gift the user owns, exactly the data the original "Saved Gift" page reads.
         final TL_stars.TL_savedStarGift saved = new TL_stars.TL_savedStarGift();
         saved.gift = gift;
         saved.date = ConnectionsManager.getInstance(account).getCurrentTime();
@@ -59,10 +57,15 @@ final class DemoSession implements DemoSheetHost {
         from.user_id = selfId;
         saved.from_id = from;
         saved.flags |= 2; // "from" present: an own gift, which gives the same page as the original
+        return saved;
+    }
 
+    /** Opens the real gift screen on a local "saved gift" of the picked base gift. */
+    void open() {
+        final long selfId = UserConfig.getInstance(account).getClientUserId();
         sheet = new StarGiftSheet(context, account, selfId, resourcesProvider);
         sheet.setDemoHost(this, gift);
-        sheet.set(saved, null);
+        sheet.set(savedBaseGift(account, gift), null);
         sheet.show();
     }
 

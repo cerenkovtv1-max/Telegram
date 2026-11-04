@@ -51,6 +51,23 @@ final class DemoUniqueGifts {
         return unique;
     }
 
+    /** Every gift the user puts into a craft adds this much to the success chance shown on the craft screen (25%). */
+    private static final int SLOT_CHANCE_PERMILLE = 250;
+
+    /** A collectible to put into a DEMO craft: same as {@link #build}, plus the per-gift craft chance the craft screen shows. */
+    static TL_stars.TL_starGiftUnique buildSlot(TL_stars.StarGift base, StarGiftPreviewSheet.Attributes traits, int serial, long userId) {
+        final TL_stars.TL_starGiftUnique unique = build(base, traits, serial, userId);
+        unique.craft_chance_permille = SLOT_CHANCE_PERMILLE;
+        return unique;
+    }
+
+    /** The collectible a successful DEMO craft gives: {@link #build}, marked as crafted (the stock "crafted" ribbon). */
+    static TL_stars.TL_starGiftUnique buildCrafted(TL_stars.StarGift base, StarGiftPreviewSheet.Attributes traits, int serial, long userId) {
+        final TL_stars.TL_starGiftUnique unique = build(base, traits, serial, userId);
+        unique.crafted = true;
+        return unique;
+    }
+
     static DemoGiftStore.Record toRecord(TL_stars.StarGift base, StarGiftPreviewSheet.Attributes traits, TL_stars.TL_starGiftUnique unique) {
         final DemoGiftStore.Record record = new DemoGiftStore.Record();
         record.serial = (int) -unique.id;

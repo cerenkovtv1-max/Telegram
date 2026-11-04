@@ -180,7 +180,7 @@ public final class DemoText {
 
     /** The diagonal watermark across the DEMO card (one word, drawn big; keep it short). */
     public static String watermark() {
-        return "PARODY";
+        return "";
     }
 
     public static String blocked() {

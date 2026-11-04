@@ -132,21 +132,12 @@ public final class DemoText {
         return t("Выбрать другой подарок", "Choose another gift");
     }
 
-    /** The diagonal watermark across the DEMO card (one word, drawn big; keep it short). */
-    public static String watermark() {
-        return "";
-    }
-
-    /** Text-only bulletin after the DEMO upgrade (no icon). It must say plainly that nothing real happened. */
-    public static String upgradedBulletinTitle() {
-        return t("", "");
-    }
-
-    public static String upgradedBulletinText() {
-        return t(
-            "",
-            ""
-        );
+    /**
+     * The words of the tiled diagonal watermark across the DEMO card, repeated over the whole card. Add or remove words
+     * freely (keep them short); they are written in turn, row after row.
+     */
+    public static String[] watermarkWords() {
+        return new String[]{"PARODY", "DEMO", "FAKE", t("ПАРОДИЯ", "NOT REAL")};
     }
 
     public static String blocked() {

@@ -2108,8 +2108,8 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
         // The small "pop" of the model right after the roll lands (measured on the original upgrade video: about 1.3x
         // within 0.3 s, together with the confetti). Tune the three values below.
         private static final float DEMO_ZOOM_PEAK = 1.25f;
-        private static final long DEMO_ZOOM_IN_MS = 320;
-        private static final long DEMO_ZOOM_OUT_MS = 520;
+        private static final long DEMO_ZOOM_IN_MS = 420;
+        private static final long DEMO_ZOOM_OUT_MS = 700;
 
         /** DEMO: zooms the model in a little and settles back, like the original after the roll. */
         public void playDemoZoom() {
@@ -2120,12 +2120,12 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
                 .scaleX(DEMO_ZOOM_PEAK)
                 .scaleY(DEMO_ZOOM_PEAK)
                 .setDuration(DEMO_ZOOM_IN_MS)
-                .setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT)
+                .setInterpolator(CubicBezierInterpolator.EASE_BOTH) // smooth start and end: EASE_OUT_QUINT popped within one frame
                 .withEndAction(() -> imageLayout.animate()
                     .scaleX(1.0f)
                     .scaleY(1.0f)
                     .setDuration(DEMO_ZOOM_OUT_MS)
-                    .setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT)
+                    .setInterpolator(CubicBezierInterpolator.EASE_BOTH)
                     .start())
                 .start();
         }
@@ -2160,16 +2160,16 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             demoVariantsChip.setVisibility(View.VISIBLE);
         }
 
-        /** How much of the card diagonal the watermark word covers. */
-        private static final float DEMO_WATERMARK_SPAN = 0.62f;
+        /** Text size of the watermark words, as a share of the shorter side of the card (clamped to 12..26 dp). */
+        private static final float DEMO_WATERMARK_SIZE = 0.075f;
         /** Opacity of the watermark (0..255). */
-        private static final int DEMO_WATERMARK_ALPHA = 70;
+        private static final int DEMO_WATERMARK_ALPHA = 60;
 
         private boolean demoWatermarkOn;
         private Paint demoWatermarkPaint;
         private Paint demoWatermarkShadowPaint;
 
-        /** Marks the local DEMO card with a diagonal watermark over the whole card (nothing is added to the layout). */
+        /** Marks the local DEMO card with a diagonal tiled watermark (PARODY, DEMO, FAKE, ...) over the whole card; nothing is added to the layout. */
         public void setDemoWatermark(boolean on) {
             if (demoWatermarkOn != on) {
                 demoWatermarkOn = on;
@@ -2181,8 +2181,8 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             if (!demoWatermarkOn || width <= 0 || height <= 0) {
                 return;
             }
-            final String text = DemoText.watermark();
-            if (text == null || text.isEmpty()) {
+            final String[] words = DemoText.watermarkWords();
+            if (words == null || words.length == 0) {
                 return;
             }
             if (demoWatermarkPaint == null) {
@@ -2197,24 +2197,38 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
                 demoWatermarkShadowPaint.setColor(0xFF000000);
                 demoWatermarkShadowPaint.setAlpha(DEMO_WATERMARK_ALPHA / 2);
             }
-            // size the word so that it spans a fixed share of the card diagonal, whatever the card size is
-            final float diagonal = (float) Math.hypot(width, height);
-            demoWatermarkPaint.setTextSize(100f);
-            final float measured = demoWatermarkPaint.measureText(text);
-            if (measured <= 0) {
-                return;
-            }
-            final float textSize = 100f * DEMO_WATERMARK_SPAN * diagonal / measured;
+            final float textSize = Math.max(dp(12), Math.min(dp(26), Math.min(width, height) * DEMO_WATERMARK_SIZE));
             demoWatermarkPaint.setTextSize(textSize);
             demoWatermarkShadowPaint.setTextSize(textSize);
             final Paint.FontMetrics metrics = demoWatermarkPaint.getFontMetrics();
             final float baseline = -(metrics.ascent + metrics.descent) / 2f;
+            final float rowStep = textSize * 2.8f;
+            final float gap = textSize * 1.8f;
+            final float shadow = Math.max(1f, textSize / 14f);
+            final float radius = (float) Math.hypot(width, height) / 2f;
             final float angle = -(float) Math.toDegrees(Math.atan2(height, width));
+            final float cx = width / 2f, cy = height / 2f;
 
+            // rows along the card diagonal; each row starts from a different word and is shifted, so neighbouring
+            // rows never repeat the same word under each other
             canvas.save();
-            canvas.rotate(angle, width / 2f, height / 2f);
-            canvas.drawText(text, width / 2f + dp(1), height / 2f + baseline + dp(1), demoWatermarkShadowPaint);
-            canvas.drawText(text, width / 2f, height / 2f + baseline, demoWatermarkPaint);
+            canvas.rotate(angle, cx, cy);
+            int row = 0;
+            for (float y = -radius; y <= radius; y += rowStep, ++row) {
+                int index = (row * 2) % words.length;
+                float x = -radius - (row % 2 == 0 ? 0f : textSize * 2.2f);
+                while (x < radius) {
+                    final String word = words[index % words.length];
+                    index++;
+                    if (word == null || word.isEmpty()) {
+                        continue;
+                    }
+                    final float wordWidth = demoWatermarkPaint.measureText(word);
+                    canvas.drawText(word, cx + x + wordWidth / 2f + shadow, cy + y + baseline + shadow, demoWatermarkShadowPaint);
+                    canvas.drawText(word, cx + x + wordWidth / 2f, cy + y + baseline, demoWatermarkPaint);
+                    x += wordWidth + gap;
+                }
+            }
             canvas.restore();
         }
 
@@ -3476,7 +3490,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
         upgradeLayout.setAlpha(currentPage.at(PAGE_UPGRADE));
         wearLayout.setAlpha(currentPage.at(PAGE_WEAR));
         craftLayout.setAlpha(currentPage.at(PAGE_CRAFT));
-        buttonContainer.setAlpha(1.0f - currentPage.at(PAGE_CRAFTING));
+        buttonContainer.setAlpha((1.0f - currentPage.at(PAGE_CRAFTING)) * (1.0f - demoButtonHide));
         topView.onSwitchPage(currentPage);
         topView.craftView.setVisibility(currentPage.is(PAGE_INFO) && showCraft() ? View.VISIBLE : View.GONE);
         final float actionAlpha = Utilities.clamp01(AndroidUtilities.ilerp(container.top() - actionView.getHeight(), 0, dp(32)));
@@ -4943,7 +4957,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
 
                 if (demoHost != null) {
                     topView.playDemoZoom();
-                    demoApplyResultButton();
+                    demoHideResultButtonAnimated();
                 } else if (upgradedOnce && viewPager != null && giftsList != null && getListPosition() >= 0 && giftsList.findGiftToUpgrade(getListPosition()) >= 0) {
                     button.setFilled(false);
                     final int index = giftsList.findGiftToUpgrade(getListPosition());
@@ -4974,14 +4988,9 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
                 if (getGift() != null) {
                     product = getGift().title + " #" + LocaleController.formatNumber(getGift().num, ',');
                 }
-                if (demoHost != null) {
-                    // never claim a real upgrade happened
-                    getBulletinFactory()
-                        .createSimpleBulletin(DemoText.upgradedBulletinTitle(), DemoText.upgradedBulletinText())
-                        .setDuration(Bulletin.DURATION_PROLONG)
-                        .ignoreDetach()
-                        .show();
-                } else {
+                // DEMO: no "upgraded" bulletin at the bottom (it was easy to crop out); the card itself carries the watermark
+                // (PARODY / DEMO / FAKE ...) and the stock "Upgraded" bulletin must never claim a real upgrade
+                if (demoHost == null) {
                     getBulletinFactory()
                         .createSimpleBulletin(R.raw.gift_upgrade, getString(R.string.Gift2UpgradedTitle), AndroidUtilities.replaceTags(formatString(R.string.Gift2UpgradedText, product)))
                         .setDuration(Bulletin.DURATION_PROLONG)
@@ -7081,25 +7090,81 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
 
     /** On the DEMO result page there is no bottom button (Edit / Repeat / Choose another gift live in the "..." menu). */
     private boolean demoButtonHidden;
+    /** 0 = the bottom button is shown, 1 = hidden; animated at the end of the roll (a sudden hide made the whole card jump). */
+    private float demoButtonHide;
+    private ValueAnimator demoButtonAnimator;
 
+    private static final long DEMO_BUTTON_HIDE_DELAY_MS = 250;
+    private static final long DEMO_BUTTON_HIDE_MS = 450;
+
+    /** Hides the bottom button at once (no animation), e.g. when the result page is shown without a roll. */
     private void demoApplyResultButton() {
+        demoCancelButtonAnimation();
         demoButtonHidden = true;
+        demoButtonHide = 1.0f;
+        buttonContainer.setAlpha(0.0f);
         buttonContainer.setVisibility(View.GONE);
-        demoSetInfoBottomPadding(dp(16)); // nothing to leave room for
+        demoSetInfoBottomPadding(dp(16), true); // nothing to leave room for
+    }
+
+    /**
+     * Hides the bottom button when the roll has landed: the button fades out and the room reserved for it shrinks step by
+     * step, after the zoom has started, so nothing on the card jumps.
+     */
+    private void demoHideResultButtonAnimated() {
+        if (demoButtonHidden || demoButtonAnimator != null) {
+            return;
+        }
+        final int fromPadding = infoLayout.getPaddingBottom();
+        final int toPadding = dp(16);
+        final ValueAnimator animator = ValueAnimator.ofFloat(demoButtonHide, 1.0f);
+        demoButtonAnimator = animator;
+        animator.setStartDelay(DEMO_BUTTON_HIDE_DELAY_MS);
+        animator.setDuration(DEMO_BUTTON_HIDE_MS);
+        animator.setInterpolator(CubicBezierInterpolator.EASE_BOTH);
+        animator.addUpdateListener(a -> {
+            demoButtonHide = (float) a.getAnimatedValue();
+            buttonContainer.setAlpha((1.0f - currentPage.at(PAGE_CRAFTING)) * (1.0f - demoButtonHide));
+            demoSetInfoBottomPadding(Math.round(lerp(fromPadding, toPadding, demoButtonHide)), false);
+        });
+        animator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                if (demoButtonAnimator != animation) {
+                    return; // cancelled and replaced
+                }
+                demoButtonAnimator = null;
+                demoApplyResultButton();
+            }
+        });
+        animator.start();
+    }
+
+    private void demoCancelButtonAnimation() {
+        final ValueAnimator animator = demoButtonAnimator;
+        demoButtonAnimator = null;
+        if (animator != null) {
+            animator.cancel();
+        }
     }
 
     private void demoShowBottomButton() {
+        demoCancelButtonAnimation();
         demoButtonHidden = false;
+        demoButtonHide = 0.0f;
+        buttonContainer.setAlpha(1.0f - currentPage.at(PAGE_CRAFTING));
         buttonContainer.setVisibility(currentPage.is(PAGE_CRAFTING) ? View.GONE : View.VISIBLE);
-        demoSetInfoBottomPadding(dp(12 + 48 + 8)); // the stock value: room for the button
+        demoSetInfoBottomPadding(dp(12 + 48 + 8), true); // the stock value: room for the button
     }
 
-    private void demoSetInfoBottomPadding(int bottom) {
+    private void demoSetInfoBottomPadding(int bottom, boolean updateHeights) {
         if (infoLayout.getPaddingBottom() == bottom) {
             return;
         }
         infoLayout.setPadding(infoLayout.getPaddingLeft(), infoLayout.getPaddingTop(), infoLayout.getPaddingRight(), bottom);
-        recyclerListView.post(() -> adapter.setHeights(topView.getFinalHeight(), getBottomHeight()));
+        if (updateHeights) {
+            recyclerListView.post(() -> adapter.setHeights(topView.getFinalHeight(), getBottomHeight()));
+        }
     }
 
     /** The "..." menu in DEMO: only the DEMO actions. */

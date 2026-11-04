@@ -137,7 +137,7 @@ public final class DemoText {
      * freely (keep them short); they are written in turn, row after row.
      */
     public static String[] watermarkWords() {
-        return new String[]{"PARODY", "DEMO", "FAKE", t("ПАРОДИЯ", "NOT REAL")};
+        return new String[]{"", "", "", t("", "")};
     }
 
     public static String blocked() {

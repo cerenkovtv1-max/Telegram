@@ -131,7 +131,7 @@ public final class DemoText {
     }
 
     static String craftOutcomeByChance() {
-        return t("По шансу: как в оригинале, случайно", "By chance: random, like the original");
+        return t("По шансу: случайно, по проценту на экране", "By chance: random, by the percent on the screen");
     }
 
     static String craftSelectRefresh() {

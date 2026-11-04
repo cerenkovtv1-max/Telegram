@@ -168,6 +168,7 @@ import org.telegram.ui.Components.ViewPagerFixed;
 import org.telegram.ui.Components.spoilers.SpoilersTextView;
 import org.telegram.ui.DialogsActivity;
 import org.telegram.ui.Stars.demo.DemoCraft;
+import org.telegram.ui.Stars.demo.DemoCraftChances;
 import org.telegram.ui.Stars.demo.DemoCraftHost;
 import org.telegram.ui.Stars.demo.DemoGiftConfig;
 import org.telegram.ui.Stars.demo.DemoSheetHost;
@@ -7081,6 +7082,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
         }
         demoCraftMode = true;
         final CraftTopView craft = topView.craftTopView;
+        craft.setDemoSuccessChances(DemoCraftChances.SUCCESS_PERMILLE);
         craft.setup(currentAccount, base.id, base.getDocument(), DemoText.giftLabel(base));
         craft.setOnCraft((gifts, whenDone, onError) -> AndroidUtilities.runOnUIThread(() -> {
             if (demoHost == null) {
@@ -11029,7 +11031,17 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             return count;
         }
 
+        /** DEMO: success chance by the number of gifts (index = count, permille); null = the original sum of the gifts' chances. */
+        private int[] demoSuccessPermille;
+
+        public void setDemoSuccessChances(int[] byCount) {
+            demoSuccessPermille = byCount;
+        }
+
         public int getGiftsSuccessChance() {
+            if (demoSuccessPermille != null && demoSuccessPermille.length > 0) {
+                return demoSuccessPermille[Utilities.clamp(getGiftsSelectedCount(), demoSuccessPermille.length - 1, 0)];
+            }
             int chance = 0;
             for (int i = 0; i < gifts.length; ++i) {
                 if (gifts[i] != null && gifts[i].getGift() != null) {
@@ -11162,6 +11174,11 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
                     closeLayout.setBackground(new RoundRectStrokeDrawable(dp(10), btnColor));
                 }
                 setGiftVisible(gift != null, animated);
+                if (demoSuccessPermille != null) {
+                    // DEMO: the chance depends on how many gifts are in, not on a single gift, so no per-gift chip on the slot
+                    chance.animate().cancel();
+                    chance.setVisibility(View.GONE);
+                }
             }
 
             public void setHideButtons(float t) {

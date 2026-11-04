@@ -132,12 +132,9 @@ public final class DemoText {
         return t("Выбрать другой подарок", "Choose another gift");
     }
 
-    /**
-     * The words of the tiled diagonal watermark across the DEMO card, repeated over the whole card. Add or remove words
-     * freely (keep them short); they are written in turn, row after row.
-     */
-    public static String[] watermarkWords() {
-        return new String[]{"", "", "", t("", "")};
+    /** The diagonal watermark across the DEMO card (one word, drawn big; keep it short). */
+    public static String watermark() {
+        return "PARODY";
     }
 
     public static String blocked() {

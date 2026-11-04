@@ -2160,16 +2160,16 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             demoVariantsChip.setVisibility(View.VISIBLE);
         }
 
-        /** Text size of the watermark words, as a share of the shorter side of the card (clamped to 12..26 dp). */
-        private static final float DEMO_WATERMARK_SIZE = 0.075f;
+        /** How much of the card diagonal the watermark word covers. */
+        private static final float DEMO_WATERMARK_SPAN = 0.62f;
         /** Opacity of the watermark (0..255). */
-        private static final int DEMO_WATERMARK_ALPHA = 60;
+        private static final int DEMO_WATERMARK_ALPHA = 70;
 
         private boolean demoWatermarkOn;
         private Paint demoWatermarkPaint;
         private Paint demoWatermarkShadowPaint;
 
-        /** Marks the local DEMO card with a diagonal tiled watermark (PARODY, DEMO, FAKE, ...) over the whole card; nothing is added to the layout. */
+        /** Marks the local DEMO card with one big diagonal watermark word over the whole card (nothing is added to the layout). */
         public void setDemoWatermark(boolean on) {
             if (demoWatermarkOn != on) {
                 demoWatermarkOn = on;
@@ -2181,9 +2181,9 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             if (!demoWatermarkOn || width <= 0 || height <= 0) {
                 return;
             }
-            final String[] words = DemoText.watermarkWords();
-            if (words == null || words.length == 0) {
-                return;
+            final String text = DemoText.watermark();
+            if (text == null || text.trim().isEmpty()) {
+                return; // nothing to draw (there is no loop here, so any text, even an empty one, is safe)
             }
             if (demoWatermarkPaint == null) {
                 demoWatermarkPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -2197,38 +2197,24 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
                 demoWatermarkShadowPaint.setColor(0xFF000000);
                 demoWatermarkShadowPaint.setAlpha(DEMO_WATERMARK_ALPHA / 2);
             }
-            final float textSize = Math.max(dp(12), Math.min(dp(26), Math.min(width, height) * DEMO_WATERMARK_SIZE));
+            // size the word so that it spans a fixed share of the card diagonal, whatever the card size is
+            final float diagonal = (float) Math.hypot(width, height);
+            demoWatermarkPaint.setTextSize(100f);
+            final float measured = demoWatermarkPaint.measureText(text);
+            if (!(measured > 0)) {
+                return;
+            }
+            final float textSize = 100f * DEMO_WATERMARK_SPAN * diagonal / measured;
             demoWatermarkPaint.setTextSize(textSize);
             demoWatermarkShadowPaint.setTextSize(textSize);
             final Paint.FontMetrics metrics = demoWatermarkPaint.getFontMetrics();
             final float baseline = -(metrics.ascent + metrics.descent) / 2f;
-            final float rowStep = textSize * 2.8f;
-            final float gap = textSize * 1.8f;
-            final float shadow = Math.max(1f, textSize / 14f);
-            final float radius = (float) Math.hypot(width, height) / 2f;
             final float angle = -(float) Math.toDegrees(Math.atan2(height, width));
-            final float cx = width / 2f, cy = height / 2f;
 
-            // rows along the card diagonal; each row starts from a different word and is shifted, so neighbouring
-            // rows never repeat the same word under each other
             canvas.save();
-            canvas.rotate(angle, cx, cy);
-            int row = 0;
-            for (float y = -radius; y <= radius; y += rowStep, ++row) {
-                int index = (row * 2) % words.length;
-                float x = -radius - (row % 2 == 0 ? 0f : textSize * 2.2f);
-                while (x < radius) {
-                    final String word = words[index % words.length];
-                    index++;
-                    if (word == null || word.isEmpty()) {
-                        continue;
-                    }
-                    final float wordWidth = demoWatermarkPaint.measureText(word);
-                    canvas.drawText(word, cx + x + wordWidth / 2f + shadow, cy + y + baseline + shadow, demoWatermarkShadowPaint);
-                    canvas.drawText(word, cx + x + wordWidth / 2f, cy + y + baseline, demoWatermarkPaint);
-                    x += wordWidth + gap;
-                }
-            }
+            canvas.rotate(angle, width / 2f, height / 2f);
+            canvas.drawText(text, width / 2f + dp(1), height / 2f + baseline + dp(1), demoWatermarkShadowPaint);
+            canvas.drawText(text, width / 2f, height / 2f + baseline, demoWatermarkPaint);
             canvas.restore();
         }
 

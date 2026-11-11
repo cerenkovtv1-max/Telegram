@@ -27,6 +27,10 @@ import java.util.Locale;
  */
 public class ParodyGiftMessage {
 
+    /** How long after the card appears the confetti starts, ms. */
+    private static final long CONFETTI_DELAY_MS = 350;
+
+    // an empty word is allowed here, but the card then draws the default "PARODY" (see StarGiftUniqueActionLayout)
     public static final String WATERMARK_TEXT = "";
 
     /** Watermark width as a share of the card diagonal (0.5 = 50%). Tune it here. */
@@ -148,7 +152,15 @@ public class ParodyGiftMessage {
             final long peerId = user != null ? user.id : chat.getDialogId();
             if (!chat.addLocalMessage(create(currentAccount, peerId, gift, command.incoming))) {
                 BulletinFactory.of(chat).createSimpleBulletin(R.raw.error, getString(R.string.ParodyGiftCantShow)).show();
+                return;
             }
+            // like a gift message that arrives in the real chat: the confetti (the stock FireworksOverlay, with a light
+            // haptic tap) bursts as the card slides in; the card's own model animation plays by itself
+            AndroidUtilities.runOnUIThread(() -> {
+                if (!chat.isFinished) {
+                    chat.startFireworks();
+                }
+            }, CONFETTI_DELAY_MS);
         }));
     }
 

@@ -27,7 +27,7 @@ import java.util.Locale;
  */
 public class ParodyGiftMessage {
 
-    public static final String WATERMARK_TEXT = "PARODY";
+    public static final String WATERMARK_TEXT = "";
 
     /** Watermark width as a share of the card diagonal (0.5 = 50%). Tune it here. */
     public static final float WATERMARK_SIZE = 0.5f;

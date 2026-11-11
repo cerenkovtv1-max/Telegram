@@ -25604,6 +25604,21 @@ public class ChatActivity extends BaseFragment implements
     private void processNewMessages(ArrayList<MessageObject> arr) {
         processNewMessages(arr, true);
     }
+
+    /**
+     * Shows a local-only message (negative id) at the bottom of the chat the same way a freshly sent message appears.
+     * Nothing is saved to the database or sent to the server. Returns false if this chat can't show it right now:
+     * not a regular chat, or the list is scrolled into the old history instead of the latest messages.
+     */
+    public boolean addLocalMessage(MessageObject messageObject) {
+        if (chatMode != MODE_DEFAULT || threadMessageId != 0 || !forwardEndReached[0] || chatAdapter == null) {
+            return false;
+        }
+        final ArrayList<MessageObject> arr = new ArrayList<>();
+        arr.add(messageObject);
+        processNewMessages(arr);
+        return true;
+    }
     private void processNewMessages(ArrayList<MessageObject> arr, final boolean animatedFromBottom) {
         FileLog.d("processNewMessages " + arr.size() + " messages");
 
@@ -30998,6 +31013,10 @@ public class ChatActivity extends BaseFragment implements
             message = null;
         }
         if (message == null) {
+            return false;
+        }
+        if (message.isParodyGift) {
+            // local-only message: reply, forward, delete and the rest would try to use its fake id on the server
             return false;
         }
         if (!single && TlUtils.isInstance(message.messageOwner.action,

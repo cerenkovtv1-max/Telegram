@@ -592,6 +592,8 @@ public class StarGiftUniqueActionLayout {
         final float w = backgroundRect.width();
         final float h = backgroundRect.height();
         final float diagonal = (float) Math.hypot(w, h);
+        // an empty word would mean no mark (and a division by zero below): the mark is mandatory, so fall back to the default word
+        final String text = ParodyGiftMessage.WATERMARK_TEXT.trim().isEmpty() ? "PARODY" : ParodyGiftMessage.WATERMARK_TEXT;
 
         parodyFillPaint.setTypeface(AndroidUtilities.bold());
         parodyFillPaint.setTextAlign(Paint.Align.CENTER);
@@ -606,7 +608,7 @@ public class StarGiftUniqueActionLayout {
         // pick the text size so that the word takes the configured share of the card diagonal
         final float size = Math.max(ParodyGiftMessage.WATERMARK_SIZE, ParodyGiftMessage.WATERMARK_MIN_SIZE);
         parodyFillPaint.setTextSize(100);
-        final float textSize = 100 * (diagonal * size) / parodyFillPaint.measureText(ParodyGiftMessage.WATERMARK_TEXT);
+        final float textSize = 100 * (diagonal * size) / parodyFillPaint.measureText(text);
         parodyFillPaint.setTextSize(textSize);
         parodyStrokePaint.setTextSize(textSize);
 
@@ -616,8 +618,8 @@ public class StarGiftUniqueActionLayout {
 
         canvas.save();
         canvas.rotate(-angle, w / 2.0f, h / 2.0f);
-        canvas.drawText(ParodyGiftMessage.WATERMARK_TEXT, w / 2.0f, baseline, parodyStrokePaint);
-        canvas.drawText(ParodyGiftMessage.WATERMARK_TEXT, w / 2.0f, baseline, parodyFillPaint);
+        canvas.drawText(text, w / 2.0f, baseline, parodyStrokePaint);
+        canvas.drawText(text, w / 2.0f, baseline, parodyFillPaint);
         canvas.restore();
     }
 
